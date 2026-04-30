@@ -68,8 +68,6 @@ export interface Translations {
     summaryEffortMedium: string;
     summaryEffortHigh: string;
     summaryEffortExtream: string;
-    highEffortReview: string;
-    highEffortReviewDesc: string;
     summaryPrompts: string;
     summaryPromptsDesc: string;
     summaryLowPrompt: string;
@@ -314,8 +312,6 @@ const en: Translations = {
     summaryEffortMedium: "Medium",
     summaryEffortHigh: "High",
     summaryEffortExtream: "Extreme",
-    highEffortReview: "Extreme review pass",
-    highEffortReviewDesc: "Run a targeted review and expansion pass after the main extreme draft is merged.",
     summaryPrompts: "Summary prompts",
     summaryPromptsDesc: "Edit the low, medium, high, and extreme summary prompts for the current plugin language. Generated summaries will follow the selected language.",
     summaryLowPrompt: "Low effort prompt",
@@ -583,8 +579,6 @@ const zhCN: Translations = {
     summaryEffortMedium: "中",
     summaryEffortHigh: "高",
     summaryEffortExtream: "极致",
-    highEffortReview: "极致审阅补讲",
-    highEffortReviewDesc: "在极致主草稿合并后，再跑一轮定点审阅和补讲。",
     summaryPrompts: "摘要提示词",
     summaryPromptsDesc: "分别编辑当前插件语言下的低、中、高、极致四档摘要提示词。生成结果会跟随所选语言输出。",
     summaryLowPrompt: "低强度提示词",

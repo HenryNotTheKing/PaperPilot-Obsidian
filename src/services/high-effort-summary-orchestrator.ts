@@ -15,6 +15,7 @@ import { t } from "../i18n";
 import { callLlmText, callLlmTextWithMeta } from "./llm-client";
 import { buildHighEffortSourceBundle } from "./huggingface-paper-client";
 import { sanitizeMarkdownForObsidian } from "./obsidian-markdown-utils";
+import { recommendRelatedPapers } from "./related-paper-recommender";
 
 interface HighEffortOrchestratorOptions {
 	app: App;
@@ -344,7 +345,7 @@ function createProgressController(
 ): ProgressController {
 	return {
 		done: 0,
-		total: 6,
+		total: 5,
 		report(progress) {
 			onProgress?.({
 				done: this.done,
@@ -1138,26 +1139,50 @@ function getSectionExplainerPrompt(
 	const style = getHighEffortStyleSupplement(settings, effort);
 	if (settings.language === "zh-CN") {
 		return [
-			"你是一名科研导师。请把单个章节解释成正式、清晰、教程式的 Markdown。",
+			"你是一名科研导师。基于一段原文片段为论文教程的某个固定章节贡献内容。",
 			"只返回 JSON：{\"markdown\":string,\"figureMentions\":string[],\"figureNote\":string}",
-			"要求：markdown 字段只写该章节应当插入到最终教程中的正文；不要生成顶层 ## 标题。",
-			"不要大段复制原文，不要把英文原段落直接贴进结果；应当改写、解释并组织成教程式表达。",
-			"优先解释：问题是什么、直觉理解、正式机制、为什么重要、容易误解的点。",
-			"如果源文本里提到了 Figure/Fig.，再把 figureMentions 填成类似 [\"Figure 2\"]，并在 figureNote 写 1 到 2 句图像前导说明；否则返回空数组和空字符串。",
-			"只使用提供的指针内容，不要猜测。",
+			"硬性约束：",
+			"1. markdown 字段必须是 1 到 4 段连贯散文，最多约 350 字；不要再加 ## 或 ### 子标题，不要复述「本节讨论了…」式元叙述。",
+			"2. 不要按原文章节顺序复述，而是围绕该 targetHeading 的主题重新组织：",
+			"   - research_question: 研究背景与动机、要解决的核心问题、与已有工作的差距。",
+			"   - core_intuition: 一句话核心想法 + 直觉解释 + 为什么这个方向是合理的。",
+			"   - method_breakdown: 方法整体架构、关键模块的职责，必要时点出数据构造与训练流程。",
+			"   - experimental_pipeline: 数据集、对比基线、评估指标、实验流程；可用紧凑的项目符号枚举。",
+			"   - results_takeaways: 关键数字与对比结论、消融启示；明确指出比较对象。",
+			"   - limitations_open_questions: 现有局限、失败模式、值得后续探索的方向。",
+			"3. 不要直接抄段落原文。把术语第一次出现时解释一次，之后简写。",
+			"4. **可读性优先**：避免大段堆叠的纯文字。请主动使用以下 Markdown 富文本组合：",
+			"   - **加粗** 用于关键名词、模块名、关键数字；*斜体* 用于强调或外文术语；==高亮== 用于核心结论或关键创新点。",
+			"   - 至少使用一个项目符号或编号列表（数据集 / 基线 / 模块 / 步骤 / 指标）；超过 3 个并列项时必须列表化。",
+			"   - 适度使用 Obsidian callout：`> [!note]` 给出附加说明，`> [!tip]` 强调重要直觉，`> [!warning]` 提示陷阱或局限，`> [!example]` 给出具体例子。每个 markdown 字段建议至少嵌入一个 callout。",
+			"   - 行内公式用 `$...$`，独立公式（占据一整行）必须使用 `$$ ... $$`，绝不允许用单美元符号包裹独立公式；列名 / 变量名用反引号包裹。",
+			"5. 不要在 markdown 中插入图片、`![]()` 语法或 `[[IMAGE:...]]` 占位符——当前版本暂不支持图像。figureMentions 一律返回空数组，figureNote 一律返回空字符串。",
+			"6. 仅使用提供的指针内容，不要外推或捏造。如果原文这一片段对当前 targetHeading 没有有效信息，markdown 写一句「该片段未涉及与本目标主题直接相关的内容。」即可。",
 			...getHighEffortPromptGuidance(settings, true),
 			style,
 		].join("\n\n");
 	}
 
 	return [
-		"You are a research tutor. Expand one source section into formal, tutorial-style Markdown.",
+		"You are a research tutor. Contribute one tutorial-style chunk that fills a specific fixed target heading using one source snippet.",
 		"Return JSON only: {\"markdown\":string,\"figureMentions\":string[],\"figureNote\":string}.",
-		"The markdown field should contain only the body that belongs inside the final tutorial; do not emit top-level ## headings.",
-		"Do not paste long source passages verbatim. Rewrite and explain them in tutorial form instead of copying the paper's prose.",
-		"Prioritize what the problem is, the intuition, the formal mechanism, why it matters, and likely misunderstandings.",
-		"Only if the source text explicitly mentions Figure/Fig. should you populate figureMentions like [\"Figure 2\"] and write a 1-2 sentence figureNote; otherwise return an empty array and empty string.",
-		"Use only the provided source pointer content. Do not guess.",
+		"Hard rules:",
+		"1. The markdown field must be 1 to 4 coherent prose paragraphs, ~350 words max. Do NOT add any ## or ### subheading. Do NOT use meta phrases like \"This section discusses ...\".",
+		"2. Do not retell the source in its original order. Reorganize content around the target heading:",
+		"   - research_question: background, motivation, the gap, what problem the paper attacks.",
+		"   - core_intuition: one-sentence central idea, the intuition, why this direction is plausible.",
+		"   - method_breakdown: overall architecture, role of key modules; mention data construction and training pipeline when relevant.",
+		"   - experimental_pipeline: datasets, baselines, metrics, evaluation protocol; a compact bullet list is fine.",
+		"   - results_takeaways: headline numbers, comparisons, ablation lessons; always state what each number is compared against.",
+		"   - limitations_open_questions: current limitations, failure modes, promising future directions.",
+		"3. Do not copy source paragraphs verbatim. Define each non-trivial term once on first mention.",
+		"4. **Readability first**: avoid solid walls of plain prose. Actively use rich Markdown:",
+		"   - **bold** for key nouns, module names, headline numbers; *italic* for emphasis or foreign terms; ==highlight== for the central claim or core innovation.",
+		"   - At least one bullet or numbered list per chunk (datasets / baselines / modules / steps / metrics). Any enumeration of >3 items MUST become a list.",
+		"   - Use Obsidian callouts judiciously: `> [!note]` for asides, `> [!tip]` for key intuition, `> [!warning]` for pitfalls and limitations, `> [!example]` for concrete examples. Aim for at least one callout per chunk.",
+		"   - Inline math `$...$`; display math (a formula on its own line) MUST use `$$ ... $$` — never wrap a stand-alone display equation with single dollars; wrap variable names and column names in backticks.",
+		"5. Do NOT insert images, `![]()` syntax, or `[[IMAGE:...]]` placeholders — image rendering is currently disabled. Always return figureMentions = [] and figureNote = \"\".",
+		"6. Use only the provided pointer content; do not extrapolate. If this snippet has nothing relevant to the target heading, return a single sentence saying \"This snippet has no content directly relevant to the target heading.\".",
 		...getHighEffortPromptGuidance(settings, true),
 		style,
 	].join("\n\n");
@@ -1314,27 +1339,99 @@ function buildPlannerUserContent(bundle: HighEffortSourceBundle, settings: Paper
 function buildSectionUserContent(
 	plan: HighEffortPlannerResult["sectionPlans"][number],
 	pointer: MarkdownContentPointer,
-	settings: PaperAnalyzerSettings
+	settings: PaperAnalyzerSettings,
+	availableImages: MarkdownContentPointer[] = []
 ): string {
+	const imageBlock = formatAvailableImagesBlock(availableImages, settings.language);
+	const themeHint = getTargetHeadingThemeHint(plan.targetHeading, settings.language);
 	if (settings.language === "zh-CN") {
 		return [
 			`目标教程章节: ${TUTORIAL_HEADINGS[settings.language][plan.targetHeading]}`,
+			`目标主题: ${themeHint}`,
 			`章节路径: ${pointer.sectionPath.join(" > ")}`,
 			`讲解目标: ${plan.goal}`,
 			`指针 ID: ${pointer.id}`,
 			"原文片段:",
 			pointer.content,
+			...(imageBlock ? [imageBlock] : []),
 		].join("\n\n");
 	}
 
 	return [
 		`Target tutorial section: ${TUTORIAL_HEADINGS[settings.language][plan.targetHeading]}`,
+		`Target theme: ${themeHint}`,
 		`Section path: ${pointer.sectionPath.join(" > ")}`,
 		`Teaching goal: ${plan.goal}`,
 		`Pointer ID: ${pointer.id}`,
 		"Source snippet:",
 		pointer.content,
+		...(imageBlock ? [imageBlock] : []),
 	].join("\n\n");
+}
+
+function getTargetHeadingThemeHint(
+	headingKey: HighEffortTutorialHeadingKey,
+	language: PaperAnalyzerSettings["language"]
+): string {
+	const zh: Record<HighEffortTutorialHeadingKey, string> = {
+		research_question: "背景、动机、要解决的问题与已有工作的差距",
+		core_intuition: "一句话核心想法、直觉解释、为什么这条路合理",
+		method_breakdown: "整体架构、关键模块、数据构造与训练流程",
+		formula_mechanism: "公式重写、变量含义、数学直觉与作用",
+		experimental_pipeline: "数据集、对比基线、评估指标与实验流程",
+		results_takeaways: "关键数字、对比结论、消融启示",
+		limitations_open_questions: "局限、失败模式、未来方向",
+	};
+	const en: Record<HighEffortTutorialHeadingKey, string> = {
+		research_question: "background, motivation, the gap, the problem the paper attacks",
+		core_intuition: "one-sentence central idea, intuition, why the direction is plausible",
+		method_breakdown: "overall architecture, key modules, data construction and training",
+		formula_mechanism: "rewritten formula, variable meanings, mathematical intuition and role",
+		experimental_pipeline: "datasets, baselines, metrics, evaluation protocol",
+		results_takeaways: "headline numbers, comparisons, ablation lessons",
+		limitations_open_questions: "limitations, failure modes, future directions",
+	};
+	return language === "zh-CN" ? zh[headingKey] : en[headingKey];
+}
+
+function formatAvailableImagesBlock(
+	images: MarkdownContentPointer[],
+	language: PaperAnalyzerSettings["language"]
+): string {
+	if (images.length === 0) return "";
+	const lines = images.map((image) => {
+		const caption = image.excerpt?.trim() || "";
+		const captionPart = caption ? ` — ${caption}` : "";
+		return `- [[IMAGE:${image.id}]]${captionPart}`;
+	});
+	const header =
+		language === "zh-CN"
+			? "可用图片（用 [[IMAGE:<id>]] 占位符引用，单独一行；切勿编造未列出的 id）："
+			: "Available images (reference with [[IMAGE:<id>]] on its own line; do not invent ids):";
+	return [header, ...lines].join("\n");
+}
+
+function findAdjacentImages(
+	bundle: HighEffortSourceBundle,
+	sectionPointer: MarkdownContentPointer,
+	max = 4
+): MarkdownContentPointer[] {
+	const result: MarkdownContentPointer[] = [];
+	for (const image of bundle.imagePointers) {
+		const sameSection =
+			image.sectionPath.length > 0 &&
+			sectionPointer.sectionPath.length > 0 &&
+			image.sectionPath[0] === sectionPointer.sectionPath[0] &&
+			image.sectionPath.join(" > ").startsWith(sectionPointer.sectionPath.join(" > "));
+		const overlap =
+			image.charStart >= sectionPointer.charStart &&
+			image.charEnd <= sectionPointer.charEnd;
+		if (sameSection || overlap) {
+			result.push(image);
+			if (result.length >= max) break;
+		}
+	}
+	return result;
 }
 
 function buildFormulaUserContent(
@@ -1565,13 +1662,18 @@ function normalizeExplainerOutput(
 	};
 }
 
-function renderExplainerBlock(title: string, markdown: string): string {
+function renderExplainerBlock(_title: string, markdown: string): string {
+	// We intentionally do NOT prepend a `### <pointer label>` sub-heading.
+	// Multiple source pointers may map to the same target heading; emitting
+	// per-pointer sub-headings produced a fragmented "outline of outlines"
+	// look in the final markdown. Instead we let `mergeDraft` concatenate the
+	// thematic prose under each `##` heading; the section-explainer prompt
+	// already instructs the model to write self-contained, flowing prose.
 	const trimmed = markdown.trim();
 	if (!trimmed) return "";
-	if (/^#{1,6}\s+/.test(trimmed)) {
-		return trimmed;
-	}
-	return `### ${title}\n${trimmed}`;
+	// Drop any stray top-level heading the model may have emitted despite
+	// instructions; keep only the body content.
+	return trimmed.replace(/^#{1,6}\s+[^\n]*\n+/, "");
 }
 
 function buildSectionSafetyNetMarkdown(
@@ -1804,16 +1906,20 @@ function mergeDraft(
 	return HEADING_ORDER.map((headingKey) => {
 		const section = sections.get(headingKey);
 		const blocks = section?.blocks.filter(Boolean) ?? [];
-		const imageBlocks = (section?.images ?? [])
-			.map((image) => {
-				const pointer = pointerMap.get(image.pointerId);
-				if (!pointer) return "";
-				return `${image.note}\n\n${pointer.content}`;
-			})
-			.filter(Boolean);
-		const body = [...blocks, ...imageBlocks].filter(Boolean).join("\n\n");
+		// Image rendering temporarily disabled — will return once a
+		// multimodal model can pick relevant figures.
+		const body = blocks.filter(Boolean).join("\n\n");
+		// The "Formula and mechanism explanation" heading is purely fed by
+		// formula pointers detected in the source. Many papers (especially
+		// systems / engineering work like video-stream assistants) have no
+		// display-math equations at all, so the formula bucket stays empty.
+		// Emitting an apologetic fallback under "## 公式与机制解释" reads
+		// poorly; just omit the section entirely in that case.
+		if (headingKey === "formula_mechanism" && !body) {
+			return "";
+		}
 		return `## ${headings[headingKey]}\n${body || fallbackText}`;
-	}).join("\n\n");
+	}).filter(Boolean).join("\n\n");
 }
 
 function normalizeRevisionRequests(
@@ -1911,10 +2017,13 @@ export async function runHighEffortSummaryOrchestrator(
 			pointerLabel(pointerMap.get(item.pointerId) as MarkdownContentPointer),
 		runItem: async (plan) => {
 			const pointer = pointerMap.get(plan.pointerId) as MarkdownContentPointer;
+			// Image insertion temporarily disabled: the current heuristic
+			// often picks unrelated figures. Will be revisited once a
+			// multimodal model handles figure selection.
 			const response = await callJsonWithRawText<Partial<HighEffortExplainerOutput>>(
 				config,
 				getSectionExplainerPrompt(settings, effort),
-				buildSectionUserContent(plan, pointer, settings),
+				buildSectionUserContent(plan, pointer, settings, []),
 				signal,
 				1100
 			);
@@ -2066,80 +2175,9 @@ export async function runHighEffortSummaryOrchestrator(
 		activeWorkers: 1,
 		pendingWorkers: 0,
 	});
-	const initialDraft = mergeDraft(
-		settings,
-		bundle,
-		planner,
-		sectionOutputs,
-		formulaOutputs,
-		[]
-	);
 	progress.advance();
 
-	const reviewPhaseName = t("summaryStatus.highReviewPhase");
-	let revisionOutputs: Array<{ heading: HighEffortTutorialHeadingKey; markdown: string }> = [];
-	if (settings.highEffortReviewEnabled) {
-		progress.report({
-			phase: reviewPhaseName,
-			message: t("summaryStatus.highReviewMessage"),
-			activeWorkers: 1,
-			pendingWorkers: 0,
-		});
-		const reviewerRaw = await callJson<{ revisionRequests?: unknown[] }>(
-			config,
-			getReviewerPrompt(settings),
-			buildReviewerUserContent(bundle, initialDraft, planner, settings),
-			signal,
-			{ revisionRequests: [] },
-			1200,
-			0.1
-		);
-		signal?.throwIfAborted();
-		const revisions = normalizeRevisionRequests(reviewerRaw, bundle);
-		progress.advance();
-		progress.addTotal(revisions.length);
-		if (revisions.length > 0) {
-			revisionOutputs = await runFanoutStage({
-				items: revisions,
-				concurrency: settings.llmConcurrency,
-				phase: reviewPhaseName,
-				buildMessage: (done, total, revision) =>
-					t("summaryStatus.highReviewRunning", {
-						done: String(Math.min(total, done + 1)),
-						total: String(total),
-						label: revision.issue,
-					}),
-				currentLabel: (revision) => revision.issue,
-				runItem: async (revision) => {
-					const revisionPointers = revision.pointerIds
-						.map((pointerId) => pointerMap.get(pointerId))
-						.filter((pointer): pointer is MarkdownContentPointer => !!pointer);
-					const raw = await callJson<{ markdown?: string }>(
-						config,
-						getExpansionPrompt(settings),
-						buildExpansionUserContent(revision, revisionPointers, settings),
-						signal,
-						{ markdown: revision.issue },
-						850
-					);
-					return {
-						heading: revision.targetHeading,
-						markdown: raw.markdown?.trim() || revision.instruction,
-					};
-				},
-				progress,
-				signal,
-			});
-		}
-	} else {
-		progress.report({
-			phase: reviewPhaseName,
-			message: t("summaryStatus.highReviewDisabled"),
-			activeWorkers: 0,
-			pendingWorkers: 0,
-		});
-		progress.advance();
-	}
+	const revisionOutputs: Array<{ heading: HighEffortTutorialHeadingKey; markdown: string }> = [];
 	signal?.throwIfAborted();
 
 	const renderPhase = getPhaseMessage("render", "default");
@@ -2156,6 +2194,28 @@ export async function runHighEffortSummaryOrchestrator(
 		formulaOutputs,
 		revisionOutputs
 	);
+	// Image insertion temporarily disabled. We still strip any stray
+	// [[IMAGE:...]] placeholders the model may emit so they do not leak
+	// into the final markdown.
+	let finalContentWithImages = finalContent.replace(/^\s*\[\[IMAGE:[^\]\n]+\]\]\s*$/gm, "").replace(/\[\[IMAGE:[^\]\n]+\]\]/g, "");
+	finalContentWithImages = upgradeStandaloneInlineMath(finalContentWithImages);
+	if (effort === "high" && options.arxivId) {
+		try {
+			const recommended = await recommendRelatedPapers({
+				paperId: `arxiv:${options.arxivId}`,
+				paperTitle: bundle.paperTitle,
+				paperAbstract: extractAbstractFromBundle(bundle),
+				settings,
+				llmConfig: config,
+				signal,
+			});
+			if (recommended && recommended.trim()) {
+				finalContentWithImages = `${finalContentWithImages}\n\n${recommended.trim()}`;
+			}
+		} catch (error) {
+			console.warn("[high-effort] related paper recommender failed", error);
+		}
+	}
 	progress.advance();
 	progress.report({
 		phase: renderPhase.phase,
@@ -2163,5 +2223,55 @@ export async function runHighEffortSummaryOrchestrator(
 		activeWorkers: 0,
 		pendingWorkers: 0,
 	});
-	return finalContent;
+	return finalContentWithImages;
+}
+
+/**
+ * Detect lines that contain only a single-dollar inline math expression and
+ * upgrade them to `$$...$$` display math. Models sometimes emit `$E=mc^2$`
+ * on its own line; Obsidian renders that as inline math inside an empty
+ * paragraph, which looks broken. Lines that mix prose with inline math are
+ * left untouched.
+ */
+function upgradeStandaloneInlineMath(markdown: string): string {
+	return markdown.replace(/^[ \t]*\$(?!\$)([^$\n]{2,}?)\$[ \t]*$/gm, (_match, body: string) => {
+		const trimmed = body.trim();
+		if (!trimmed) return _match;
+		return `$$\n${trimmed}\n$$`;
+	});
+}
+
+export function replaceImagePlaceholders(
+	markdown: string,
+	pointerMap: Map<string, MarkdownContentPointer>
+): string {
+	return markdown.replace(/\[\[IMAGE:([^\]\n]+)\]\]/g, (full, rawId: string) => {
+		const id = rawId.trim();
+		const pointer = pointerMap.get(id);
+		if (pointer && pointer.kind === "image" && pointer.content.startsWith("![")) {
+			return pointer.content;
+		}
+		// Fuzzy: also accept the ordinal-only key like "image:3:..." prefix or alt match
+		for (const [, candidate] of pointerMap) {
+			if (candidate.kind !== "image") continue;
+			if (candidate.id === id || candidate.id.endsWith(`:${id}`)) {
+				return candidate.content;
+			}
+		}
+		return "";
+	});
+}
+
+function extractAbstractFromBundle(bundle: HighEffortSourceBundle): string {
+	const abstractPointer = bundle.sectionPointers.find((pointer) =>
+		pointer.sectionPath.some((segment) => /^(abstract|摘要)$/i.test(segment.trim()))
+	);
+	if (abstractPointer) {
+		return abstractPointer.content.replace(/\s+/g, " ").trim().slice(0, 1500);
+	}
+	const firstParagraph = bundle.paragraphPointers[0];
+	if (firstParagraph) {
+		return firstParagraph.content.replace(/\s+/g, " ").trim().slice(0, 1500);
+	}
+	return bundle.markdown.replace(/\s+/g, " ").trim().slice(0, 1500);
 }

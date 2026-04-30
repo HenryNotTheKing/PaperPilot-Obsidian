@@ -72,4 +72,36 @@ describe("chunkMarkdownByHeadings", () => {
 		expect(pointers.formulas).toHaveLength(1);
 		expect(pointers.formulas[0]?.content).toContain("z_i = ");
 	});
+
+	it("populates image excerpt with adjacent caption text", () => {
+		const markdown = [
+			"# Title",
+			"Some intro.",
+			"",
+			"![arch](https://example.com/fig1.png)",
+			"",
+			"Figure 1: An overview of our system architecture.",
+			"",
+			"More text after.",
+		].join("\n");
+
+		const pointers = indexMarkdownContentPointers(markdown);
+		expect(pointers.images).toHaveLength(1);
+		const excerpt = pointers.images[0]?.excerpt ?? "";
+		expect(excerpt.toLowerCase()).toContain("figure 1");
+		expect(excerpt.length).toBeLessThanOrEqual(120);
+	});
+
+	it("falls back to alt text when no caption paragraph is adjacent", () => {
+		const markdown = [
+			"# Title",
+			"",
+			"![system overview](https://example.com/x.png)",
+			"",
+		].join("\n");
+
+		const pointers = indexMarkdownContentPointers(markdown);
+		const excerpt = pointers.images[0]?.excerpt ?? "";
+		expect(excerpt).toContain("system overview");
+	});
 });

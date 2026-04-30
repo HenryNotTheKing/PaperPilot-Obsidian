@@ -355,8 +355,6 @@ export default class PaperAnalyzerPlugin extends Plugin {
 				: DEFAULT_SETTINGS.huggingFaceApiKey;
 		const normalizedPreferHuggingFacePaperMarkdown =
 			loaded?.preferHuggingFacePaperMarkdown !== false;
-		const normalizedHighEffortReviewEnabled =
-			loaded?.highEffortReviewEnabled !== false;
 		const normalizedAutoSummarizeAfterImport =
 			loaded?.autoSummarizeAfterImport === true;
 		const normalizedDefaultSummaryEffort = normalizeSummaryEffort(
@@ -418,8 +416,6 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		const preferHuggingFacePaperMarkdownChanged =
 			this.settings.preferHuggingFacePaperMarkdown !==
 			normalizedPreferHuggingFacePaperMarkdown;
-		const highEffortReviewEnabledChanged =
-			this.settings.highEffortReviewEnabled !== normalizedHighEffortReviewEnabled;
 		const autoSummarizeAfterImportChanged =
 			this.settings.autoSummarizeAfterImport !==
 			normalizedAutoSummarizeAfterImport;
@@ -453,7 +449,6 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		this.settings.huggingFaceApiKey = normalizedHuggingFaceApiKey;
 		this.settings.preferHuggingFacePaperMarkdown =
 			normalizedPreferHuggingFacePaperMarkdown;
-		this.settings.highEffortReviewEnabled = normalizedHighEffortReviewEnabled;
 		this.settings.autoSummarizeAfterImport = normalizedAutoSummarizeAfterImport;
 		this.settings.defaultSummaryEffort = normalizedDefaultSummaryEffort;
 		this.settings.summaryLowPrompt = normalizedSummaryLowPrompt;
@@ -475,7 +470,6 @@ export default class PaperAnalyzerPlugin extends Plugin {
 			huggingFaceUserIdChanged ||
 			huggingFaceApiKeyChanged ||
 			preferHuggingFacePaperMarkdownChanged ||
-			highEffortReviewEnabledChanged ||
 			autoSummarizeAfterImportChanged ||
 			defaultSummaryEffortChanged ||
 			summaryLowPromptChanged ||

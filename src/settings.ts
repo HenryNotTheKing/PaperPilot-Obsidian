@@ -49,7 +49,6 @@ export interface PaperAnalyzerSettings {
 	huggingFaceUserId: string;
 	huggingFaceApiKey: string;
 	preferHuggingFacePaperMarkdown: boolean;
-	highEffortReviewEnabled: boolean;
 
 	extractionPrompt: string;
 	autoSummarizeAfterImport: boolean;
@@ -94,7 +93,6 @@ export const DEFAULT_SETTINGS: PaperAnalyzerSettings = {
 	huggingFaceUserId: "",
 	huggingFaceApiKey: "",
 	preferHuggingFacePaperMarkdown: true,
-	highEffortReviewEnabled: true,
 
 	extractionPrompt: DEFAULT_EXTRACTION_PROMPT,
 	autoSummarizeAfterImport: false,
@@ -592,18 +590,6 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 							value,
 							DEFAULT_SETTINGS.defaultSummaryEffort
 						);
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName(t("settings.highEffortReview"))
-			.setDesc(t("settings.highEffortReviewDesc"))
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.highEffortReviewEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.highEffortReviewEnabled = value;
 						await this.plugin.saveSettings();
 					})
 			);

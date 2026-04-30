@@ -314,11 +314,31 @@ function buildBundleFromMarkdown(
 		sourceKind: result.kind,
 		sourceLabel: result.label,
 		attempts,
-		sectionPointers: pointers.sections,
+		sectionPointers: pointers.sections.filter(isSubstantiveSection),
 		paragraphPointers: pointers.paragraphs,
 		formulaPointers: pointers.formulas,
 		imagePointers: pointers.images,
 	};
+}
+
+function isSubstantiveSection(pointer: { content: string; sectionPath: readonly string[] }): boolean {
+	// Drop sections that are essentially empty or only carry LaTeX/markdown
+	// formatting commands. These confuse the high-effort planner and lead the
+	// model to generate meta-commentary like "由于原文仅包含格式命令...".
+	const stripped = pointer.content
+		.replace(/```[\s\S]*?```/g, "")
+		.replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+		.replace(/\\[a-zA-Z]+(\{[^}]*\})*/g, "")
+		.replace(/[#>*_`~|\-\\{}\[\]()]/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+	if (stripped.length >= 80) return true;
+	// Always retain explicitly named sections even if short, except the
+	// chunker's catch-all "Document" pseudo-heading which is pure noise when
+	// empty.
+	const lastHeading = pointer.sectionPath[pointer.sectionPath.length - 1] ?? "";
+	if (/^document$/i.test(lastHeading.trim())) return false;
+	return stripped.length >= 30;
 }
 
 export async function buildHighEffortSourceBundle(

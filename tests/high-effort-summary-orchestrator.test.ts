@@ -145,12 +145,12 @@ describe("runHighEffortSummaryOrchestrator", () => {
 			expect(systemPrompt).toContain("不要进入思考模式");
 		}
 		expect(content).toContain("## 实验流程与证据");
-		expect(content).toContain("## 实验流程与证据\n### Experiments");
 		expect(content).toContain("## 结果与启示");
-		expect(content).toContain("## 结果与启示\n### Conclusion");
 		expect(content).toContain("## 局限与开放问题");
-		expect(content).toContain("## 局限与开放问题\n### Conclusion");
 		expect(content).toContain("> [!note]");
+		// We intentionally drop per-pointer ### sub-headings so the final
+		// markdown reads as flowing prose under each ## heading.
+		expect(content).not.toMatch(/^### /m);
 	});
 
 	it("repairs leaked source text and bare formulas instead of pasting raw pointers", async () => {

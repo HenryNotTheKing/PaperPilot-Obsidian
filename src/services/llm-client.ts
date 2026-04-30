@@ -112,7 +112,7 @@ function getNestedErrorRecord(payload: JsonRecord | null): JsonRecord | null {
 }
 
 function extractResponsePayload(response: LlmResponse): JsonRecord | null {
-	const payload = (response as { json?: unknown }).json;
+	const payload = safeReadJsonFromResponse(response);
 	if (isRecord(payload)) {
 		return payload;
 	}
@@ -126,6 +126,23 @@ function extractResponsePayload(response: LlmResponse): JsonRecord | null {
 		const parsed = JSON.parse(text) as unknown;
 		return isRecord(parsed) ? parsed : null;
 	} catch {
+		return null;
+	}
+}
+
+function safeReadJsonFromResponse(response: LlmResponse): unknown {
+	try {
+		const value = (response as { json?: unknown }).json;
+		return value ?? null;
+	} catch {
+		const text = (response as { text?: unknown }).text;
+		if (typeof text === "string" && text.trim()) {
+			try {
+				return JSON.parse(text) as unknown;
+			} catch {
+				return null;
+			}
+		}
 		return null;
 	}
 }
@@ -827,7 +844,7 @@ export async function callLlmTextWithMeta(
 			);
 
 			if (resp.status === 200) {
-				return extractLlmTextResult(request.provider, resp.json);
+				return extractLlmTextResult(request.provider, safeReadJsonFromResponse(resp));
 			}
 
 			const responseError = llmError ?? parseLlmErrorResponse(request, resp);

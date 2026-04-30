@@ -109,16 +109,18 @@ Any OpenAI-compatible provider works (OpenAI, DeepSeek, Qwen, local Ollama, etc.
 
 ### Summary effort levels
 
-When generating a summary you choose one of four effort levels. They control how much of the paper is fed to the model and how long the output can be:
+When generating a summary you choose one of four effort levels. They control the depth, tone, and pipeline used:
 
-| Level | Context fed to LLM | Max output | Sections covered |
-|---|---|---|---|
-| **Low** | ~6 k tokens, up to 5 chunks | ~900 tokens | Abstract, intro, conclusion, experiments, method |
-| **Medium** | ~12 k tokens, up to 10 chunks | ~1 500 tokens | All major sections including related work |
-| **High** | ~18 k tokens, up to 16 chunks | ~2 200 tokens | Same sections, more content per section |
-| **Extreme** | ~24 k tokens, up to 20 chunks | ~2 800 tokens | Maximum depth, full multi-pass orchestration |
+| Level | Pipeline | Output style |
+|---|---|---|
+| **Low** | Single LLM call | A few hundred words: problem, main contributions, brief method outline. For quick triage. |
+| **Medium** | Single LLM call | Full-paper summary with per-section bullets. Compact, no jargon expansion — a fast review of a paper you already read. |
+| **High** | Multi-stage agent (planner → per-section explainers → formula expansion → merge) | Rigorous academic review: extracted figures and formulas inserted in place, every term defined, plus a **Recommended reading** section with 5 related papers from citations and references. |
+| **Extreme** | Multi-stage agent (same structure as High) | Plain-language deep dive in a blog-like voice, written for a first-year graduate student new to the field. Every technical detail, motivation, and design choice is unpacked patiently. |
 
-**Recommendation:** Start with **Medium** for a first read. Use **High** or **Extreme** when you need to understand methodology in detail. Use **Low** for a quick abstract-level triage.
+The output length is governed by soft prompt-level guidance, not by hard token caps, so the model can adapt its length to the paper's complexity. Concurrency for all multi-stage fan-outs is controlled by the single **LLM concurrency** setting.
+
+**Recommendation:** Start with **Medium** for a first read. Use **High** when you need methodology rigor; use **Extreme** when you want intuition and beginner-friendly explanations. Use **Low** for a quick abstract-level triage.
 
 ### Other settings
 

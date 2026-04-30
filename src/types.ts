@@ -273,8 +273,9 @@ Structure (use these exact ## headings, in this order):
 Inside each section:
 - Lead with the paper's own claim, then add the explanation needed to make that claim understandable.
 - For every formula or algorithmic step, define every symbol, state what each term contributes, and explain why the formula has that shape.
-- Whenever the section content references a figure that exists in the source, INCLUDE that figure exactly once where it best supports the text. To insert a figure use the placeholder \`[[IMAGE:<id>]]\` on its own line — never write raw \`![]()\` markdown, never invent IDs. The runtime will replace the placeholder with the original image. If no relevant figure id is provided, do not insert any image.
-- Use compact bullet lists for parameter tables, dataset lists, and ablation rows. Use \`$$\` math blocks for displayed equations.
+- Use rich Markdown for readability: **bold** for key nouns and headline numbers, *italic* for emphasis, ==highlight== for the central claim, compact bullets for parameter tables / dataset lists / ablation rows, and Obsidian callouts (note, tip, warning, example) where they help.
+- Use math blocks for displayed equations and inline math as appropriate.
+- Do not insert images, image markdown syntax, or IMAGE placeholders — image rendering is currently disabled.
 
 Output language: English. No chain-of-thought, no <think> tags, no JSON. Return Markdown only.`;
 
@@ -300,8 +301,9 @@ Structure (use these exact ## headings, in this order):
 Inside each section:
 - Walk through the paper's own sections in narrative order. Re-derive intuition before stating any formal definition.
 - Define every symbol the first time it appears. Re-state the definition any time it has been a while since the symbol last appeared.
-- When a figure is referenced and its id has been provided to you, insert it as \`[[IMAGE:<id>]]\` on its own line where it would help. Never write raw \`![]()\` markdown, never invent IDs.
+- Use rich Markdown to break up long prose: **bold**, *italic*, ==highlight==, bullet lists, and Obsidian callouts (note, tip, warning, example) where they aid reading.
 - It is OK to ask rhetorical questions to motivate the next paragraph. It is NOT OK to fabricate experiments, numbers, or claims.
+- Do not insert images, image markdown syntax, or IMAGE placeholders — image rendering is currently disabled.
 
 Output language: English. No chain-of-thought, no <think> tags, no JSON. Return Markdown only.`;
 
@@ -352,8 +354,8 @@ export const DEFAULT_SUMMARY_HIGH_PROMPT_ZH = `你是一名资深科研导师，
 每节要求：
 - 先复述论文自身的论点，再补充让该论点站得住脚的解释。
 - 出现公式或算法步骤时，定义每一个符号、说明每一项的作用、解释为什么公式长这个样子。
-- 当原文内容确实引用了某张图，并且我提供了对应的图片 id 时，请使用占位符 \`[[IMAGE:<id>]]\` 单独成行插入，不要使用 \`![]()\` 原生 markdown，也不要编造 id。运行时会替换成原图。如果没有提供合适的 id，就不要插图。
-- 参数表、数据集列表、消融行可以用紧凑的项目符号；行内公式用 \`$...$\`，独立公式用 \`$$ ... $$\`。
+- 充分利用 Markdown 富文本提升可读性：**加粗** 标关键名词与数字，*斜体* 用于强调与外文术语，==高亮== 用于核心论点；参数表、数据集、基线、消融行用紧凑的项目符号；行内公式与独立公式都正常使用；适度使用 Obsidian callout（note、tip、warning、example）打破纯文字段落。
+- 当前版本暂不支持插图，禁止输出图片 markdown 或 IMAGE 占位符。
 
 输出语言：简体中文。不要输出思考过程、<think> 标签或 JSON，只输出 Markdown。`;
 
@@ -379,8 +381,9 @@ export const DEFAULT_SUMMARY_EXTREAM_PROMPT_ZH = `你是一位语气温和、表
 每节要求：
 - 按论文原本章节的叙事顺序展开。任何形式化定义之前，先把直觉讲透。
 - 每个符号在第一次出现时必须给出含义；如果它已经隔了较长一段没再出现，再次出现时再讲一次。
-- 当涉及一张图、并且我提供了对应的图片 id 时，请用 \`[[IMAGE:<id>]]\` 占位符单独一行插入；绝不使用 \`![]()\` 原生 markdown，绝不编造 id。
+- 充分利用 Markdown 富文本提升可读性：**加粗**、*斜体*、==高亮==、项目符号、Obsidian callout（note、tip、warning、example）都欢迎使用，避免连续大段纯文字。
 - 可以用反问句来引出下一段；但不允许编造实验、数字或论点。
+- 当前版本暂不支持插图，禁止输出图片 markdown 或 IMAGE 占位符。
 
 输出语言：简体中文。不要输出思考过程、<think> 标签或 JSON，只输出 Markdown。`;
 

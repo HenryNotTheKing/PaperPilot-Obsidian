@@ -90,18 +90,22 @@ function buildPointer(
 	lineEnd: number,
 	charStart: number,
 	charEnd: number,
-	content: string
+	content: string,
+	excerptOverride?: string
 ): MarkdownContentPointer {
 	const normalizedContent = content.trim();
 	const contentHash = hashContent(
 		`${kind}\n${sectionPath.join(" > ")}\n${normalizedContent}`
 	);
+	const excerpt = excerptOverride
+		? collapsePointerExcerpt(excerptOverride)
+		: collapsePointerExcerpt(normalizedContent);
 	return {
 		id: `${kind}:${ordinal}:${contentHash}`,
 		kind,
 		ordinal,
 		sectionPath,
-		excerpt: collapsePointerExcerpt(normalizedContent),
+		excerpt,
 		lineStart,
 		lineEnd,
 		charStart,
@@ -196,15 +200,62 @@ function isTrivialFormula(formula: string): boolean {
 	return /^\\?[A-Za-z]+(?:_[A-Za-z0-9{}]+|\^[A-Za-z0-9{}]+)*$/.test(inner);
 }
 
-function collectImageRanges(content: string): ContentRange[] {
+interface ImageRange extends ContentRange {
+	caption: string;
+}
+
+function extractCaptionSnippet(text: string): string {
+	const collapsed = text.replace(/\s+/g, " ").trim();
+	if (!collapsed) return "";
+	// First sentence: stop at . ! ? 。 ！ ？ followed by space/end
+	const sentenceMatch = collapsed.match(/^(.+?[.!?。！？])(?:\s|$)/);
+	const sentence: string = sentenceMatch?.[1] ?? collapsed;
+	const sliced: string = sentence.length > 120 ? `${sentence.slice(0, 117).trimEnd()}...` : sentence;
+	return sliced.trim();
+}
+
+function findCaptionForImage(
+	content: string,
+	imageStart: number,
+	imageEnd: number
+): string {
+	const altMatch = /!\[([^\]]*)\]/.exec(content.slice(imageStart, imageEnd));
+	const alt = altMatch?.[1]?.trim() ?? "";
+
+	// Look at the line right after the image first.
+	const after = content.slice(imageEnd).replace(/^\n+/, "");
+	const afterPara = after.split(/\n\s*\n/)[0]?.trim() ?? "";
+	const afterCaption = extractCaptionSnippet(stripMarkdownInline(afterPara));
+	if (
+		afterCaption &&
+		!/^!\[/.test(afterPara) &&
+		(/^(figure|fig\.?|table|图|表)/i.test(afterCaption) || afterCaption.length >= 12)
+	) {
+		return afterCaption;
+	}
+
+	// Otherwise look at the paragraph immediately before.
+	const before = content.slice(0, imageStart).replace(/\n+$/, "");
+	const beforePara = before.split(/\n\s*\n/).pop()?.trim() ?? "";
+	const beforeCaption = extractCaptionSnippet(stripMarkdownInline(beforePara));
+	if (beforeCaption && !/^!\[/.test(beforePara) && beforeCaption.length >= 12) {
+		return beforeCaption;
+	}
+
+	return alt;
+}
+
+function collectImageRanges(content: string): ImageRange[] {
 	return Array.from(content.matchAll(/!\[[^\]]*\]\([^\s)]+(?:\s+"[^"]*")?\)/g)).map(
 		(match) => {
 			const imageMarkdown = match[0]?.trim() ?? "";
 			const start = match.index ?? 0;
+			const end = start + imageMarkdown.length;
 			return {
 				start,
-				end: start + imageMarkdown.length,
+				end,
 				content: imageMarkdown,
+				caption: findCaptionForImage(content, start, end),
 			};
 		}
 	);
@@ -348,7 +399,8 @@ export function indexMarkdownContentPointers(markdown: string): MarkdownContentP
 					lineNumberFromOffset(chunk.lineStart, chunk.content, range.end),
 					chunk.charStart + range.start,
 					chunk.charStart + range.end,
-					range.content
+					range.content,
+					range.caption || undefined
 				)
 			);
 		}
