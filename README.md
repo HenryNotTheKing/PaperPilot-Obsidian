@@ -55,10 +55,10 @@ Paper Pilot is desktop-only.
 ### Manual install
 
 1. Download `main.js`, `manifest.json`, `styles.css`, and `pdf.worker.min.mjs` from the release page.
-2. Put them into `.obsidian/plugins/ai-paper-analyzer/` inside your vault.
+2. Put them into `.obsidian/plugins/PaperPilot/` inside your vault.
 3. Open `Settings -> Community plugins` in Obsidian and enable Paper Pilot.
 
-Note: the display name is `Paper Pilot`, while the plugin ID remains `ai-paper-analyzer` for compatibility with existing installs and saved data.
+Note: this release changes the plugin ID to `PaperPilot`. If you installed an older build under `.obsidian/plugins/ai-paper-analyzer/`, move or reinstall the plugin into `.obsidian/plugins/PaperPilot/`.
 
 ### Build from source
 
@@ -68,6 +68,8 @@ cd PaperPilot-Obsidian
 npm install
 npm run build
 ```
+
+Copy the built `main.js`, `manifest.json`, `styles.css`, and `pdf.worker.min.mjs` into `.obsidian/plugins/PaperPilot/`.
 
 ## Configuration
 

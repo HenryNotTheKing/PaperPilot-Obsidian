@@ -53,10 +53,10 @@ Paper Pilot 目前仅支持桌面端。
 ### 手动安装
 
 1. 从 release 页面下载 `main.js`、`manifest.json`、`styles.css`、`pdf.worker.min.mjs`。
-2. 将它们放进你的库目录 `.obsidian/plugins/ai-paper-analyzer/`。
+2. 将它们放进你的库目录 `.obsidian/plugins/PaperPilot/`。
 3. 在 Obsidian 中打开 `设置 -> 第三方插件`，启用 Paper Pilot。
 
-说明：当前插件展示名是 `Paper Pilot`，但插件 ID 仍然保留为 `ai-paper-analyzer`，这样可以兼容已有安装和历史数据。
+说明：本次发布把插件 ID 改成了 `PaperPilot`。如果你之前把旧版本安装在 `.obsidian/plugins/ai-paper-analyzer/` 下，需要迁移或重新安装到 `.obsidian/plugins/PaperPilot/`。
 
 ### 从源码构建
 
@@ -66,6 +66,8 @@ cd PaperPilot-Obsidian
 npm install
 npm run build
 ```
+
+构建完成后，把 `main.js`、`manifest.json`、`styles.css`、`pdf.worker.min.mjs` 复制到 `.obsidian/plugins/PaperPilot/`。
 
 ## 配置
 
