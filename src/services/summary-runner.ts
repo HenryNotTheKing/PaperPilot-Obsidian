@@ -2,7 +2,6 @@ import type { App, TFile } from "obsidian";
 import type { PaperAnalyzerSettings } from "../settings";
 import type {
 	LlmConfig,
-	SectionTag,
 	SummaryEffort,
 	SummaryQueueProgress,
 	TextChunk,
@@ -24,63 +23,14 @@ import { parsePdf, type PageData } from "./pdf-parser";
 import { chunkPages } from "./section-chunker";
 import { writeSummaryBlock } from "./summary-writer";
 
-const SECTION_PRIORITY_BY_EFFORT: Record<SummaryEffort, SectionTag[]> = {
-	low: ["abstract", "introduction", "conclusion", "experiment", "method", "other"],
-	medium: [
-		"abstract",
-		"introduction",
-		"method",
-		"experiment",
-		"conclusion",
-		"related_work",
-		"other",
-	],
-	high: [
-		"abstract",
-		"introduction",
-		"method",
-		"experiment",
-		"conclusion",
-		"related_work",
-		"other",
-	],
-	extream: [
-		"abstract",
-		"introduction",
-		"method",
-		"experiment",
-		"conclusion",
-		"related_work",
-		"other",
-	],
-};
-
-const CONTEXT_LIMITS: Record<SummaryEffort, number> = {
-	low: 6000,
-	medium: 12000,
-	high: 18000,
-	extream: 24000,
-};
-
-const CHUNK_LIMITS: Record<SummaryEffort, number> = {
-	low: 5,
-	medium: 10,
-	high: 16,
-	extream: 20,
-};
-
-const MARKDOWN_CHUNK_LIMITS: Record<SummaryEffort, number> = {
-	low: 6,
-	medium: 12,
-	high: 18,
-	extream: 24,
-};
-
-const MAX_OUTPUT_TOKENS: Record<SummaryEffort, number> = {
-	low: 900,
-	medium: 1500,
-	high: 2200,
-	extream: 2800,
+// Soft-limit policy: the input is always the full paper. Output length is
+// controlled by the prompt itself; we only pass a generous maxTokens floor so
+// that providers do not silently truncate. Low is intentionally one paragraph.
+const SOFT_OUTPUT_TOKEN_FLOOR: Record<SummaryEffort, number> = {
+	low: 4096,
+	medium: 16384,
+	high: 16384,
+	extream: 16384,
 };
 
 export type SummaryProgress = SummaryQueueProgress;
@@ -117,38 +67,9 @@ function getSummaryConfig(settings: PaperAnalyzerSettings): LlmConfig {
 	};
 }
 
-function truncateText(value: string, maxChars: number): string {
-	if (value.length <= maxChars) return value;
-	const truncated = value.slice(0, maxChars);
-	const lastBoundary = Math.max(
-		truncated.lastIndexOf("\n\n"),
-		truncated.lastIndexOf(". "),
-		truncated.lastIndexOf("\n")
-	);
-	if (lastBoundary > Math.floor(maxChars * 0.6)) {
-		return `${truncated.slice(0, lastBoundary).trim()}\n\n[Truncated for summary context]`;
-	}
-	return `${truncated.trim()}\n\n[Truncated for summary context]`;
-}
-
 function formatChunk(chunk: TextChunk): string {
 	const label = chunk.headingText || chunk.sectionTag;
 	return `### ${label}\n${chunk.text.trim()}`;
-}
-
-function inferMarkdownSectionTag(chunk: MarkdownSectionChunk): SectionTag {
-	const text = chunk.path.join(" ").toLowerCase();
-	if (/(^|\s)(abstract|摘要)(\s|$)/.test(text)) return "abstract";
-	if (/(^|\s)(introduction|motivation|背景|研究动机)(\s|$)/.test(text)) return "introduction";
-	if (/(related work|相关工作|prior work|literature review)/.test(text)) return "related_work";
-	if (/(method|approach|framework|architecture|algorithm|方法|模型|框架|机制)/.test(text)) {
-		return "method";
-	}
-	if (/(experiment|evaluation|results|implementation|ablation|实验|结果|实现细节|评估)/.test(text)) {
-		return "experiment";
-	}
-	if (/(conclusion|discussion|limitations|结论|局限|总结)/.test(text)) return "conclusion";
-	return "other";
 }
 
 function formatMarkdownChunk(chunk: MarkdownSectionChunk): string {
@@ -156,74 +77,31 @@ function formatMarkdownChunk(chunk: MarkdownSectionChunk): string {
 	return `## ${label}\n${chunk.content.trim()}`;
 }
 
-function selectSummaryChunks(
-	chunks: TextChunk[],
-	effort: SummaryEffort
-): TextChunk[] {
-	const priority = SECTION_PRIORITY_BY_EFFORT[effort];
-	const chunkLimit = CHUNK_LIMITS[effort];
-	const selected: TextChunk[] = [];
-	for (const section of priority) {
-		for (const chunk of chunks) {
-			if (chunk.sectionTag !== section) continue;
-			if (selected.includes(chunk)) continue;
-			selected.push(chunk);
-			if (selected.length >= chunkLimit) return selected;
-		}
-	}
-	return selected.slice(0, chunkLimit);
-}
-
-function selectMarkdownSummaryChunks(
-	chunks: MarkdownSectionChunk[],
-	effort: SummaryEffort
-): MarkdownSectionChunk[] {
-	const priority = SECTION_PRIORITY_BY_EFFORT[effort];
-	const chunkLimit = MARKDOWN_CHUNK_LIMITS[effort];
-	const selected: MarkdownSectionChunk[] = [];
-	for (const section of priority) {
-		for (const chunk of chunks) {
-			if (inferMarkdownSectionTag(chunk) !== section) continue;
-			if (selected.includes(chunk)) continue;
-			selected.push(chunk);
-			if (selected.length >= chunkLimit) return selected;
-		}
-	}
-	return selected.slice(0, chunkLimit);
-}
-
 export function buildSummarySourceText(
 	pdfFile: Pick<TFile, "basename">,
-	pages: PageData[],
-	effort: SummaryEffort
+	pages: PageData[]
 ): string {
 	const chunks = chunkPages(pages);
 	if (chunks.length === 0) {
 		const fallbackText = pages.map((page) => page.fullText).join("\n\n").trim();
-		return truncateText(
-			`# ${pdfFile.basename}\n\n${fallbackText}`,
-			CONTEXT_LIMITS[effort]
-		);
+		return `# ${pdfFile.basename}\n\n${fallbackText}`.trim();
 	}
 
-	const selected = selectSummaryChunks(chunks, effort);
-	const joined = selected.map(formatChunk).join("\n\n");
-	return truncateText(`# ${pdfFile.basename}\n\n${joined}`, CONTEXT_LIMITS[effort]);
+	const joined = chunks.map(formatChunk).join("\n\n");
+	return `# ${pdfFile.basename}\n\n${joined}`.trim();
 }
 
 export function buildSummarySourceTextFromMarkdown(
 	paperTitle: string,
-	markdown: string,
-	effort: SummaryEffort
+	markdown: string
 ): string {
 	const chunks = chunkMarkdownByHeadings(markdown);
 	if (chunks.length === 0) {
-		return truncateHuggingFacePaperMarkdown(`# ${paperTitle}\n\n${markdown}`, effort);
+		return truncateHuggingFacePaperMarkdown(`# ${paperTitle}\n\n${markdown}`);
 	}
 
-	const selected = selectMarkdownSummaryChunks(chunks, effort);
-	const joined = selected.map(formatMarkdownChunk).join("\n\n");
-	return truncateHuggingFacePaperMarkdown(`# ${paperTitle}\n\n${joined}`, effort);
+	const joined = chunks.map(formatMarkdownChunk).join("\n\n");
+	return truncateHuggingFacePaperMarkdown(`# ${paperTitle}\n\n${joined}`);
 }
 
 function resolveArxivIdFromNote(app: App, noteFile: TFile): string | null {
@@ -251,21 +129,20 @@ async function buildSummarySourceFromPreferredContent(
 	app: App,
 	pdfFile: TFile,
 	noteFile: TFile,
-	settings: PaperAnalyzerSettings,
-	effort: SummaryEffort
+	settings: PaperAnalyzerSettings
 ): Promise<string> {
 	if (settings.preferHuggingFacePaperMarkdown) {
 		const arxivId = resolveArxivIdFromNote(app, noteFile);
 		if (arxivId) {
 			const markdown = await fetchPaperMarkdownFromHuggingFace(arxivId, settings);
 			if (markdown) {
-				return buildSummarySourceTextFromMarkdown(pdfFile.basename, markdown, effort);
+				return buildSummarySourceTextFromMarkdown(pdfFile.basename, markdown);
 			}
 		}
 	}
 
 	const pages = await parsePdf(app, pdfFile);
-	return buildSummarySourceText(pdfFile, pages, effort);
+	return buildSummarySourceText(pdfFile, pages);
 }
 
 function buildSummaryUserContent(
@@ -329,6 +206,7 @@ export async function runSummary(
 			arxivId: resolveArxivIdFromNote(app, noteFile),
 			settings,
 			config,
+			effort,
 			onProgress: reportProgress,
 			signal,
 		});
@@ -345,8 +223,7 @@ export async function runSummary(
 			app,
 			pdfFile,
 			noteFile,
-			settings,
-			effort
+			settings
 		);
 		signal?.throwIfAborted();
 		const prompt = getSummaryPrompt(settings, effort);
@@ -366,7 +243,7 @@ export async function runSummary(
 			signal,
 			{
 				responseMode: "text",
-				maxTokens: MAX_OUTPUT_TOKENS[effort],
+				maxTokens: SOFT_OUTPUT_TOKEN_FLOOR[effort],
 				temperature: 0.1,
 			}
 		);

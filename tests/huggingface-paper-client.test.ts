@@ -60,16 +60,16 @@ describe("truncateHuggingFacePaperMarkdown", () => {
 			"Important text.",
 		].join("\n");
 
-		const result = truncateHuggingFacePaperMarkdown(source, "low");
+		const result = truncateHuggingFacePaperMarkdown(source);
 		expect(result).not.toContain("![Image]");
 		expect(result).toContain("## Section");
 	});
 
-	it("truncates long markdown sources by effort", () => {
+	it("preserves the full source under the soft-limit policy", () => {
 		const source = `# Title\n\n${"content ".repeat(4000)}`;
-		const result = truncateHuggingFacePaperMarkdown(source, "low");
-		expect(result.length).toBeLessThan(source.length);
-		expect(result).toContain("[Truncated Hugging Face markdown source]");
+		const result = truncateHuggingFacePaperMarkdown(source);
+		expect(result).not.toContain("[Truncated Hugging Face markdown source]");
+		expect(result.length).toBeGreaterThan(source.length * 0.9);
 	});
 });
 

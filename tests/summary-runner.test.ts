@@ -40,7 +40,7 @@ describe("buildSummarySourceText", () => {
 			]),
 		];
 
-		const source = buildSummarySourceText({ basename: "AURA" }, pages, "low");
+		const source = buildSummarySourceText({ basename: "AURA" }, pages);
 		expect(source).toContain("# AURA");
 		expect(source).toContain("### Abstract");
 		expect(source).toContain("### Introduction");
@@ -52,7 +52,7 @@ describe("buildSummarySourceText", () => {
 			makePage(1, [{ text: "Loose text with no obvious heading or section markers." }]),
 		];
 
-		const source = buildSummarySourceText({ basename: "Loose Paper" }, pages, "medium");
+		const source = buildSummarySourceText({ basename: "Loose Paper" }, pages);
 		expect(source).toContain("# Loose Paper");
 		expect(source).toContain("Loose text with no obvious heading");
 	});
@@ -70,7 +70,7 @@ describe("buildSummarySourceText", () => {
 			"Experiment text.",
 		].join("\n");
 
-		const source = buildSummarySourceTextFromMarkdown("AURA", markdown, "medium");
+		const source = buildSummarySourceTextFromMarkdown("AURA", markdown);
 		expect(source).toContain("# AURA");
 		expect(source).toContain("## AURA > Abstract");
 		expect(source).toContain("## AURA > Method");

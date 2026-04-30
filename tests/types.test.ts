@@ -43,18 +43,18 @@ describe("normalizeSummaryEffort", () => {
 describe("default summary prompts", () => {
 	it("ship non-empty prompt defaults for all effort levels", () => {
 		expect(DEFAULT_SUMMARY_LOW_PROMPT.length).toBeGreaterThan(40);
-		expect(DEFAULT_SUMMARY_MEDIUM_PROMPT).toContain("## Method");
+		expect(DEFAULT_SUMMARY_MEDIUM_PROMPT).toContain("## TL;DR");
 		expect(DEFAULT_SUMMARY_HIGH_PROMPT).toContain(
 			"## Formula and mechanism explanation"
 		);
-		expect(DEFAULT_SUMMARY_EXTREAM_PROMPT).toContain("## Reimplementation notes");
+		expect(DEFAULT_SUMMARY_EXTREAM_PROMPT).toContain("## Limitations and open questions");
 	});
 
 	it("ship localized Chinese prompt defaults for all effort levels", () => {
 		expect(DEFAULT_SUMMARY_LOW_PROMPT_ZH).toContain("简体中文");
-		expect(DEFAULT_SUMMARY_MEDIUM_PROMPT_ZH).toContain("## 方法");
+		expect(DEFAULT_SUMMARY_MEDIUM_PROMPT_ZH).toContain("## 速览");
 		expect(DEFAULT_SUMMARY_HIGH_PROMPT_ZH).toContain("## 公式与机制解释");
-		expect(DEFAULT_SUMMARY_EXTREAM_PROMPT_ZH).toContain("## 复现提示");
+		expect(DEFAULT_SUMMARY_EXTREAM_PROMPT_ZH).toContain("## 局限与开放问题");
 	});
 
 	it("returns prompt defaults by locale and effort", () => {

@@ -8,6 +8,7 @@ import type {
 	HighEffortTutorialHeadingKey,
 	LlmConfig,
 	MarkdownContentPointer,
+	SummaryEffort,
 	SummaryQueueProgress,
 } from "../types";
 import { t } from "../i18n";
@@ -22,6 +23,7 @@ interface HighEffortOrchestratorOptions {
 	arxivId?: string | null;
 	settings: PaperAnalyzerSettings;
 	config: LlmConfig;
+	effort?: SummaryEffort;
 	onProgress?: (progress: SummaryQueueProgress) => void;
 	signal?: AbortSignal;
 }
@@ -64,9 +66,6 @@ const HEADING_ORDER: HighEffortTutorialHeadingKey[] = [
 	"limitations_open_questions",
 ];
 
-const SECTION_STAGE_CONCURRENCY = 4;
-const FORMULA_STAGE_CONCURRENCY = 3;
-const REVIEW_STAGE_CONCURRENCY = 3;
 const MAX_PLANNED_SECTIONS = 10;
 const MAX_PLANNED_FORMULAS = 6;
 const MAX_REVISION_REQUESTS = 4;
@@ -232,10 +231,21 @@ const IGNORABLE_SECTION_PATTERNS: RegExp[] = [
 	/数据可用性/,
 ];
 
-function getHighEffortStyleSupplement(settings: PaperAnalyzerSettings): string {
-	return settings.language === "zh-CN"
-		? settings.summaryHighPromptZh.trim()
-		: settings.summaryHighPrompt.trim();
+function getHighEffortStyleSupplement(
+	settings: PaperAnalyzerSettings,
+	effort: SummaryEffort = "high"
+): string {
+	const isChinese = settings.language === "zh-CN";
+	if (effort === "extream") {
+		return (isChinese
+			? settings.summaryExtreamPromptZh
+			: settings.summaryExtreamPrompt
+		).trim();
+	}
+	return (isChinese
+		? settings.summaryHighPromptZh
+		: settings.summaryHighPrompt
+	).trim();
 }
 
 function getHighEffortPromptGuidance(
@@ -1089,8 +1099,11 @@ function buildRuleBasedPlanner(
 	);
 }
 
-function getPlannerPrompt(settings: PaperAnalyzerSettings): string {
-	const style = getHighEffortStyleSupplement(settings);
+function getPlannerPrompt(
+	settings: PaperAnalyzerSettings,
+	effort: SummaryEffort = "high"
+): string {
+	const style = getHighEffortStyleSupplement(settings, effort);
 	if (settings.language === "zh-CN") {
 		return [
 			"你是一名科研教程策划助手。请基于论文结构指针规划一个高强度、教程式、书面化的论文讲解。",
@@ -1118,8 +1131,11 @@ function getPlannerPrompt(settings: PaperAnalyzerSettings): string {
 	].join("\n\n");
 }
 
-function getSectionExplainerPrompt(settings: PaperAnalyzerSettings): string {
-	const style = getHighEffortStyleSupplement(settings);
+function getSectionExplainerPrompt(
+	settings: PaperAnalyzerSettings,
+	effort: SummaryEffort = "high"
+): string {
+	const style = getHighEffortStyleSupplement(settings, effort);
 	if (settings.language === "zh-CN") {
 		return [
 			"你是一名科研导师。请把单个章节解释成正式、清晰、教程式的 Markdown。",
@@ -1147,8 +1163,11 @@ function getSectionExplainerPrompt(settings: PaperAnalyzerSettings): string {
 	].join("\n\n");
 }
 
-function getFormulaExplainerPrompt(settings: PaperAnalyzerSettings): string {
-	const style = getHighEffortStyleSupplement(settings);
+function getFormulaExplainerPrompt(
+	settings: PaperAnalyzerSettings,
+	effort: SummaryEffort = "high"
+): string {
+	const style = getHighEffortStyleSupplement(settings, effort);
 	if (settings.language === "zh-CN") {
 		return [
 			"你是一名科研数学讲解助手。请把单个公式解释成正式、教程式的 Markdown。",
@@ -1840,6 +1859,7 @@ export async function runHighEffortSummaryOrchestrator(
 ): Promise<string> {
 	const progress = createProgressController(options.onProgress);
 	const { settings, signal, config } = options;
+	const effort: SummaryEffort = options.effort ?? "high";
 
 	const sourcePhase = getPhaseMessage("source", "default");
 	progress.report({
@@ -1878,7 +1898,7 @@ export async function runHighEffortSummaryOrchestrator(
 	const sectionPhaseName = t("summaryStatus.highSectionsPhase");
 	const sectionOutputs = await runFanoutStage({
 		items: planner.sectionPlans,
-		concurrency: Math.min(settings.llmConcurrency, SECTION_STAGE_CONCURRENCY),
+		concurrency: settings.llmConcurrency,
 		phase: sectionPhaseName,
 		buildMessage: (done, total, item) =>
 			t("summaryStatus.highSectionsRunning", {
@@ -1893,7 +1913,7 @@ export async function runHighEffortSummaryOrchestrator(
 			const pointer = pointerMap.get(plan.pointerId) as MarkdownContentPointer;
 			const response = await callJsonWithRawText<Partial<HighEffortExplainerOutput>>(
 				config,
-				getSectionExplainerPrompt(settings),
+				getSectionExplainerPrompt(settings, effort),
 				buildSectionUserContent(plan, pointer, settings),
 				signal,
 				1100
@@ -1962,7 +1982,7 @@ export async function runHighEffortSummaryOrchestrator(
 	const formulaPhaseName = t("summaryStatus.highFormulasPhase");
 	const formulaOutputs = await runFanoutStage({
 		items: formulaPointers,
-		concurrency: Math.min(settings.llmConcurrency, FORMULA_STAGE_CONCURRENCY),
+		concurrency: settings.llmConcurrency,
 		phase: formulaPhaseName,
 		buildMessage: (done, total, item) =>
 			t("summaryStatus.highFormulasRunning", {
@@ -1975,7 +1995,7 @@ export async function runHighEffortSummaryOrchestrator(
 			const sectionPointer = findOwningSection(bundle, pointer);
 			const response = await callJsonWithRawText<Partial<HighEffortExplainerOutput>>(
 				config,
-				getFormulaExplainerPrompt(settings),
+				getFormulaExplainerPrompt(settings, effort),
 				buildFormulaUserContent(pointer, sectionPointer, settings),
 				signal,
 				900
@@ -2081,7 +2101,7 @@ export async function runHighEffortSummaryOrchestrator(
 		if (revisions.length > 0) {
 			revisionOutputs = await runFanoutStage({
 				items: revisions,
-				concurrency: Math.min(settings.llmConcurrency, REVIEW_STAGE_CONCURRENCY),
+				concurrency: settings.llmConcurrency,
 				phase: reviewPhaseName,
 				buildMessage: (done, total, revision) =>
 					t("summaryStatus.highReviewRunning", {

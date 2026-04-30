@@ -4,7 +4,6 @@ import type {
 	HighEffortSourceAttempt,
 	HighEffortSourceBundle,
 	HighEffortSourceKind,
-	SummaryEffort,
 } from "../types";
 import { indexMarkdownContentPointers } from "./markdown-section-chunker";
 import {
@@ -18,12 +17,6 @@ const HUGGING_FACE_PAPERS_BASE_URL = "https://huggingface.co";
 const ARXIV_HTML_BASE_URL = "https://arxiv.org";
 const AR5IV_BASE_URL = "https://ar5iv.labs.arxiv.org";
 const JINA_READER_BASE_URL = "https://r.jina.ai/http://arxiv.org";
-const HUGGING_FACE_MARKDOWN_CONTEXT_LIMITS: Record<SummaryEffort, number> = {
-	low: 9000,
-	medium: 22000,
-	high: 36000,
-	extream: 44000,
-};
 
 interface HighEffortSourceBundleOptions {
 	app: App;
@@ -58,30 +51,16 @@ export function buildJinaReaderUrl(arxivId: string): string {
 	return `${JINA_READER_BASE_URL}/html/${encodeURIComponent(arxivId)}`;
 }
 
-export function truncateHuggingFacePaperMarkdown(
-	markdown: string,
-	effort: SummaryEffort
-): string {
+export function truncateHuggingFacePaperMarkdown(markdown: string): string {
 	const normalized = markdown.replace(/\r\n?/g, "\n").trim();
 	if (!normalized) return "";
 
-	const sanitized = normalized
+	// Soft-limit policy: do not truncate the input. Just normalize whitespace
+	// and strip raw image markdown that the plain summary path cannot use.
+	return normalized
 		.replace(/!\[[^\]]*\]\([^)]*\)/g, "")
 		.replace(/\n{3,}/g, "\n\n")
 		.trim();
-	const limit = HUGGING_FACE_MARKDOWN_CONTEXT_LIMITS[effort];
-	if (sanitized.length <= limit) return sanitized;
-
-	const truncated = sanitized.slice(0, limit);
-	const lastBoundary = Math.max(
-		truncated.lastIndexOf("\n## "),
-		truncated.lastIndexOf("\n### "),
-		truncated.lastIndexOf("\n\n")
-	);
-	if (lastBoundary > Math.floor(limit * 0.6)) {
-		return `${truncated.slice(0, lastBoundary).trim()}\n\n[Truncated Hugging Face markdown source]`;
-	}
-	return `${truncated.trim()}\n\n[Truncated Hugging Face markdown source]`;
 }
 
 export async function fetchPaperMarkdownFromHuggingFace(
