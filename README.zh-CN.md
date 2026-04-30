@@ -83,7 +83,7 @@ npm run build
 
 ### PDF 高亮 + 引用侧栏
 
-![PDF 高亮效果](screenshots/05-pdf-highlights.png)
+![PDF 高亮效果](screenshots/cn-05-pdf-highlights.png)
 
 ### 主题兼容性
 

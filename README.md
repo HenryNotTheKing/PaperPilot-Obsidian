@@ -83,7 +83,7 @@ Academic papers are dense skies — dozens of pages, hundreds of citations, mult
 
 ### PDF highlights + Citation sidebar
 
-![PDF highlights](screenshots/05-pdf-highlights.png)
+![PDF highlights](screenshots/cn-05-pdf-highlights.png)
 
 ### Theme compatibility
 
