@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-paperpilot",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Paper Pilot — import arXiv papers, extract AI-powered highlights, and pilot your way through dense PDFs.",
 	"main": "main.js",
 	"type": "module",
