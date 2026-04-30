@@ -17,25 +17,38 @@ Import arXiv papers, extract AI-powered highlights, and trace every insight back
 
 ---
 
-## Why "Paper Pilot"?
+## Installation
 
-Academic papers are dense skies. Reading one paper means navigating dozens of pages, hundreds of citations, and multiple technical threads — all at once.
+Paper Pilot is desktop-only and requires your own LLM API endpoint (OpenAI-compatible). See [Configuration](#configuration) for how to set it up after install.
 
-**Paper Pilot** is your co-pilot for that journey.
+### Manual install
 
-Just as a flight co-pilot handles the instruments so the captain can focus on judgment, Paper Pilot handles the mechanics of reading: importing PDFs, chunking sections, extracting key claims, painting them back onto the page with color-coded highlights, and surfacing related papers from your vault or the web.
+1. Download `main.js`, `manifest.json`, `styles.css`, and `pdf.worker.min.mjs` from the [latest release](https://github.com/HenryNotTheKing/PaperPilot-Obsidian/releases/latest).
+2. Create the folder `.obsidian/plugins/PaperPilot/` inside your vault and place the files there.
+3. Open **Settings → Community plugins** in Obsidian and enable **Paper Pilot**.
+4. Go to **Settings → Community plugins → Paper Pilot** and fill in your LLM endpoint and model names.
 
-You stay in command. The plugin does the navigation.
+> **Migrating from an older build?**
+> If you installed a previous build under `.obsidian/plugins/ai-paper-analyzer/`, move all files to `.obsidian/plugins/PaperPilot/` and reload Obsidian.
 
-The name also nods to the *pilot study* — that first exploratory pass through a new research area. Paper Pilot is designed precisely for that moment: when you are parachuting into an unfamiliar field and need to get your bearings fast.
+### Build from source
+
+```bash
+git clone https://github.com/HenryNotTheKing/PaperPilot-Obsidian.git
+cd PaperPilot-Obsidian
+npm install
+npm run build
+```
+
+Copy the built `main.js`, `manifest.json`, `styles.css`, and `pdf.worker.min.mjs` into `.obsidian/plugins/PaperPilot/`.
 
 ---
 
-## What Paper Pilot does
+## Why "Paper Pilot"?
 
-Paper Pilot is a desktop Obsidian plugin for researchers who want more than a generic AI summary.
+Academic papers are dense skies — dozens of pages, hundreds of citations, multiple technical threads, all at once.
 
-It imports arXiv papers into your vault, runs section-level LLM analysis, paints evidence back onto the PDF with color-coded highlights, and keeps your notes connected to the exact page that supports each claim.
+**Paper Pilot** is your co-pilot: it handles the instrumentation (importing, chunking, extracting, highlighting) so you can focus on the judgment. Like a *pilot study*, it is your first exploratory pass through unfamiliar territory.
 
 ---
 
@@ -80,55 +93,46 @@ Paper Pilot adapts to any Obsidian theme. Highlight colors and sidebar appearanc
 
 ---
 
-## Installation
-
-Paper Pilot is desktop-only.
-
-### Manual install
-
-1. Download `main.js`, `manifest.json`, `styles.css`, and `pdf.worker.min.mjs` from the [release page](https://github.com/HenryNotTheKing/PaperPilot-Obsidian/releases/latest).
-2. Create the folder `.obsidian/plugins/PaperPilot/` inside your vault and put the files there.
-3. Open **Settings → Community plugins** in Obsidian and enable **Paper Pilot**.
-
-> **Migrating from an older build?**
-> If you installed a previous build under `.obsidian/plugins/ai-paper-analyzer/`, move all files to `.obsidian/plugins/PaperPilot/` and reload Obsidian.
-
-### Build from source
-
-```bash
-git clone https://github.com/HenryNotTheKing/PaperPilot-Obsidian.git
-cd PaperPilot-Obsidian
-npm install
-npm run build
-```
-
-Copy the built `main.js`, `manifest.json`, `styles.css`, and `pdf.worker.min.mjs` into `.obsidian/plugins/PaperPilot/`.
-
----
-
 ## Configuration
 
 Open **Settings → Community plugins → Paper Pilot**.
 
-### Required
+### LLM endpoints (required)
 
 | Setting | Description |
 |---|---|
-| Extraction model | LLM endpoint and model name used for section-level extraction |
-| Summary model | LLM endpoint and model name used for summary generation |
+| **Extraction model** | OpenAI-compatible API base URL + model name used for section-level highlight extraction |
+| **Summary model** | OpenAI-compatible API base URL + model name used for summary generation |
+| **API key** | Bearer token for the above endpoints (can be the same key for both) |
 
-### Optional
+Any OpenAI-compatible provider works (OpenAI, DeepSeek, Qwen, local Ollama, etc.).
+
+### Summary effort levels
+
+When generating a summary you choose one of four effort levels. They control how much of the paper is fed to the model and how long the output can be:
+
+| Level | Context fed to LLM | Max output | Sections covered |
+|---|---|---|---|
+| **Low** | ~6 k tokens, up to 5 chunks | ~900 tokens | Abstract, intro, conclusion, experiments, method |
+| **Medium** | ~12 k tokens, up to 10 chunks | ~1 500 tokens | All major sections including related work |
+| **High** | ~18 k tokens, up to 16 chunks | ~2 200 tokens | Same sections, more content per section |
+| **Extreme** | ~24 k tokens, up to 20 chunks | ~2 800 tokens | Maximum depth, full multi-pass orchestration |
+
+**Recommendation:** Start with **Medium** for a first read. Use **High** or **Extreme** when you need to understand methodology in detail. Use **Low** for a quick abstract-level triage.
+
+### Other settings
 
 | Setting | Description |
 |---|---|
-| Language | UI language (English / Simplified Chinese) |
-| File paths | Where PDFs and notes are saved in your vault |
+| Language | UI language — English or Simplified Chinese |
+| File paths | Where PDFs and notes are saved inside your vault |
 | Duplicate handling | What to do when a paper is already in your vault |
 | Paper note template | Custom frontmatter and body template for new notes |
 | Hugging Face paper markdown | Additional metadata fields from Hugging Face Papers |
-| Highlight colors & opacity | Per-category colors (motivation, method, result, …) and overlay transparency |
-| LLM concurrency | How many parallel LLM requests to allow |
-| Citation sidebar | Depth, source, and display options |
+| Highlight colors | Per-category colors: motivation, method, result, background, other |
+| Highlight opacity | Overlay transparency (0.15 – 1.0) |
+| LLM concurrency | How many parallel LLM requests are allowed |
+| Citation sidebar | Depth, source, and display options for the citation panel |
 
 ---
 
