@@ -488,6 +488,20 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 				})
 		);
 
+		new Setting(containerEl)
+			.setName(t("settings.llmConcurrency"))
+			.setDesc(t("settings.llmConcurrencyDesc"))
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 10, 1)
+					.setValue(this.plugin.settings.llmConcurrency)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.llmConcurrency = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		new Setting(containerEl).setName(t("settings.huggingFace")).setHeading();
 		containerEl.createEl("p", {
 			text: t("settings.huggingFaceDesc"),
@@ -780,23 +794,6 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 						this.plugin.settings.highlightOpacity = value;
 						await this.plugin.saveSettings();
 						this.plugin.rerenderPdfHighlights();
-					})
-			);
-
-		// --- Advanced ---
-		new Setting(containerEl).setName(t("settings.advanced")).setHeading();
-
-		new Setting(containerEl)
-			.setName(t("settings.llmConcurrency"))
-			.setDesc(t("settings.llmConcurrencyDesc"))
-			.addSlider((slider) =>
-				slider
-					.setLimits(1, 10, 1)
-					.setValue(this.plugin.settings.llmConcurrency)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.llmConcurrency = value;
-						await this.plugin.saveSettings();
 					})
 			);
 
