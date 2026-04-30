@@ -48,7 +48,7 @@ function isTableCell(item: PageTextItem, bodyMedian: number): boolean {
 	const t = item.text.trim();
 	if (!t || t.length > 20) return false;
 	// Primarily numeric content (numbers, %, ±, decimal points)
-	const numChars = (t.match(/[\d.%±,\-\/]/g) ?? []).length;
+	const numChars = (t.match(/[\d.%±,\-/]/g) ?? []).length;
 	if (numChars / t.length > 0.7 && t.length >= 1) {
 		// Only skip if the height roughly matches body text (avoids skipping headings with numbers)
 		if (item.height > 0 && item.height <= bodyMedian * 1.1) return true;
@@ -220,8 +220,8 @@ export function chunkPages(pages: PageData[]): TextChunk[] {
 					: t;
 				currentTag = classifyHeading(headingRaw);
 				// Clean heading text: strip leading numbering like "3.1 " or "IV. "
-				currentHeading = headingRaw.replace(/^\s*(\d+[\.\):]?\s*)+/, "")
-					.replace(/^\s*[IVXLC]+[\.\):]\s*/i, "")
+				currentHeading = headingRaw.replace(/^\s*(\d+[.):]?\s*)+/, "")
+					.replace(/^\s*[IVXLC]+[.):]\s*/i, "")
 					.trim() || headingRaw.trim();
 				currentPageNum = item.pageNum;
 				currentItemStart = item.index;

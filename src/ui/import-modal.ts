@@ -134,7 +134,6 @@ export class ImportModal extends Modal {
 		const { contentEl } = this;
 		contentEl.addClass("paper-analyzer-modal");
 		contentEl.addClass("paper-analyzer-modal--import");
-		// eslint-disable-next-line obsidianmd/ui/sentence-case
 		new Setting(contentEl).setName(t("importModal.heading")).setHeading();
 
 		// URL input rows
@@ -327,13 +326,15 @@ export class ImportModal extends Modal {
 
 		const total = queueItem.progress?.total ?? 0;
 		const doneCount = queueItem.progress?.done ?? 0;
+		/* eslint-disable obsidianmd/no-static-styles-assignment */
 		if (queueItem.status === "done") {
-			fill.style.width = "100%";
+			fill.style.setProperty("width", "100%");
 		} else if (total > 0) {
-			fill.style.width = `${Math.round((doneCount / total) * 100)}%`;
+			fill.style.setProperty("width", `${Math.round((doneCount / total) * 100)}%`);
 		} else if (queueItem.status === "running" || queueItem.status === "pending") {
 			fill.addClass("paper-analyzer-progress-fill--running");
 		}
+		/* eslint-enable obsidianmd/no-static-styles-assignment */
 
 		if (queueItem.status === "error") {
 			taskEl.createEl("small", {

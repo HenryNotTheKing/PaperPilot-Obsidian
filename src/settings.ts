@@ -977,13 +977,11 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 				cls: "paper-analyzer-queue-card-button",
 			});
 			button.type = "button";
-			button.addEventListener("click", async () => {
+			button.addEventListener("click", () => {
 				button.disabled = true;
-				try {
-					await clearCompleted();
-				} finally {
+				void clearCompleted().finally(() => {
 					button.disabled = false;
-				}
+				});
 			});
 		}
 

@@ -802,7 +802,7 @@ export function getTranslations(): Translations {
 
 function interpolate(text: string, params?: Record<string, string | number>): string {
   if (!params) return text;
-  return text.replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? `{${key}}`));
+  return text.replace(/\{(\w+)\}/g, (_match: string, key: string) => String(params[key] ?? `{${key}}`));
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {

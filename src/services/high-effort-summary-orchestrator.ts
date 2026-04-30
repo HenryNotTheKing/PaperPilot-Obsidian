@@ -564,11 +564,11 @@ function coerceRawMarkdownResponse(rawText: string): string {
 			tryJsonParse<unknown>(unfenced)
 		);
 		if (unfencedMarkdown) return unfencedMarkdown;
-		if (/^[\[{]/.test(unfenced)) return "";
+		if (/^[[{]/.test(unfenced)) return "";
 		return unfenced;
 	}
 
-	if (/^[\[{]/.test(trimmed)) return "";
+	if (/^[[{]/.test(trimmed)) return "";
 	return trimmed;
 }
 
@@ -631,13 +631,13 @@ function looksLikeTruncatedJsonLikeResponse(value: string): boolean {
 
 	const looksJsonLike =
 		/^```json\b/i.test(trimmed) ||
-		/^[\[{]/.test(unfenced) ||
+		/^[[{]/.test(unfenced) ||
 		/"(?:markdown|revisionRequests|sectionPlans|formulaPointerIds|tutorialTitle)"\s*:/.test(
 			unfenced
 		);
 	if (!looksJsonLike) return false;
 	if (/^```json\b/i.test(trimmed) && hasDanglingCodeFence(trimmed)) return true;
-	if (/^[\[{]/.test(unfenced) && !/[}\]]\s*$/.test(unfenced)) return true;
+	if (/^[[{]/.test(unfenced) && !/[}\]]\s*$/.test(unfenced)) return true;
 	return !/[}\]]\s*$/.test(unfenced);
 }
 
@@ -1424,7 +1424,7 @@ async function runFanoutStage<TInput, TOutput>(options: {
 	progress: ProgressController;
 	signal?: AbortSignal;
 }): Promise<TOutput[]> {
-	const results: TOutput[] = new Array(options.items.length);
+	const results: TOutput[] = [];
 	if (options.items.length === 0) return results;
 
 	let nextIndex = 0;

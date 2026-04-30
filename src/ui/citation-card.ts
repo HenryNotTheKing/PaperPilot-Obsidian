@@ -68,7 +68,6 @@ export function renderCard(
 	importBtn.buttonEl.addClass("citation-import-btn");
 	importBtn.onClick((e) => {
 		e.stopPropagation();
-		console.log("[citation-card] import button clicked for paper:", callbacks.onImportClick.toString().slice(0, 100));
 		callbacks.onImportClick(paper);
 	});
 }

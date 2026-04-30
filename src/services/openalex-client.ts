@@ -39,7 +39,7 @@ export function parsePaperS2(r: S2Paper): PaperMeta {
 		(doi ? `https://doi.org/${doi}` : "") ||
 		`https://www.semanticscholar.org/paper/${r.paperId}`;
 
-	console.log("[parsePaperS2]", {
+	console.debug("[parsePaperS2]", {
 		paperId: r.paperId,
 		arxivId,
 		doi,

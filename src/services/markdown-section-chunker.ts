@@ -191,7 +191,7 @@ function isTrivialFormula(formula: string): boolean {
 	if (/\\(?:frac|sum|prod|operatorname|mathrm|softmax|argmax|argmin)/.test(inner)) {
 		return false;
 	}
-	if (/[()\[\]{}]/.test(inner) && inner.length >= 8) return false;
+	if (/[()[\]{}]/.test(inner) && inner.length >= 8) return false;
 	if (/[\^_]/.test(inner) && inner.length >= 6) return false;
 	return /^\\?[A-Za-z]+(?:_[A-Za-z0-9{}]+|\^[A-Za-z0-9{}]+)*$/.test(inner);
 }

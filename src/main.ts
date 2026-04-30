@@ -174,26 +174,26 @@ export default class PaperAnalyzerPlugin extends Plugin {
 	}
 
 	async importAndAnalyze(paper: PaperMeta): Promise<void> {
-		console.log("[importAndAnalyze] called with:", JSON.stringify({ id: paper.id, url: paper.url, pdfUrl: paper.pdfUrl }));
+		console.debug("[importAndAnalyze] called with:", JSON.stringify({ id: paper.id, url: paper.url, pdfUrl: paper.pdfUrl }));
 		// Try to extract an arxiv ID using the robust extractArxivId function
 		const candidates = [paper.url, paper.pdfUrl, paper.id].filter(Boolean) as string[];
-		console.log("[importAndAnalyze] candidates:", candidates);
+		console.debug("[importAndAnalyze] candidates:", candidates);
 		for (const candidate of candidates) {
 			const arxivId = extractArxivId(candidate);
 			if (arxivId) {
-				console.log("[importAndAnalyze] matched arxivId:", arxivId, "from candidate:", candidate);
+				console.debug("[importAndAnalyze] matched arxivId:", arxivId, "from candidate:", candidate);
 				new ImportModal(this.app, this, [`https://arxiv.org/abs/${arxivId}`]).open();
 				return;
 			}
 		}
 		// Fallback: open the paper URL in the browser
 		if (paper.url) {
-			console.log("[importAndAnalyze] fallback opening url:", paper.url);
+			console.debug("[importAndAnalyze] fallback opening url:", paper.url);
 			window.open(paper.url, "_blank", "noopener,noreferrer");
 		} else if (paper.id && !paper.id.includes("/") && paper.id.length > 20) {
 			// For citation papers that may only have S2 URLs (no arxiv/DOI)
 			const s2Url = `https://www.semanticscholar.org/paper/${paper.id}`;
-			console.log("[importAndAnalyze] fallback opening s2Url:", s2Url);
+			console.debug("[importAndAnalyze] fallback opening s2Url:", s2Url);
 			window.open(s2Url, "_blank", "noopener,noreferrer");
 		}
 	}

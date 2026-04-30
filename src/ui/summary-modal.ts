@@ -102,7 +102,7 @@ export class SummaryModal extends Modal {
 		this.progressWrapEl = contentEl.createDiv({
 			cls: "paper-analyzer-progress-wrap paper-analyzer-surface",
 		});
-		this.progressWrapEl.style.display = "none";
+		this.progressWrapEl.hide();
 
 		this.statusTextEl = this.progressWrapEl.createDiv({
 			cls: "paper-analyzer-status-text",
@@ -341,11 +341,11 @@ export class SummaryModal extends Modal {
 	}
 
 	private showProgress(): void {
-		if (this.progressWrapEl) this.progressWrapEl.style.display = "";
+		if (this.progressWrapEl) this.progressWrapEl.show();
 	}
 
 	private hideProgress(): void {
-		if (this.progressWrapEl) this.progressWrapEl.style.display = "none";
+		if (this.progressWrapEl) this.progressWrapEl.hide();
 	}
 
 	private setBtnRunning(): void {

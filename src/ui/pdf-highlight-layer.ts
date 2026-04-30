@@ -594,6 +594,7 @@ export class PdfHighlightLayer {
 		const compact = text.replace(/\s+/g, "");
 		if (compact.length === 0) return true;
 
+		// eslint-disable-next-line no-control-regex
 		const controlCount = this.countMatches(compact, /[\u0000-\u001f]/g);
 		const greekOrMathCount = this.countMatches(compact, /[Λ∆πθβσ∑∫≈≠≤≥±∞∼−×÷]/gu);
 		const alphaNumCount = this.countMatches(compact, /[A-Za-z0-9]/g);
