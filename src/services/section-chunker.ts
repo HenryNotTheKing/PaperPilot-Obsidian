@@ -98,7 +98,7 @@ function computeBodyMedian(allItems: PageTextItem[]): number {
 }
 
 // Numbered heading patterns common in academic papers (e.g., "1 Introduction", "3.1 Encoder")
-const NUMBERED_HEADING_PATTERN =
+const _NUMBERED_HEADING_PATTERN =
 	/^\s*(\d+\.?\s+[A-Z]|\d+\.\d+\.?\s+[A-Z]|[IVXLC]+\.?\s+[A-Z])/;
 
 /** An item is a heading if its height is above the body median by enough margin.

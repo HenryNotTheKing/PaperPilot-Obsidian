@@ -12,7 +12,7 @@ import type {
 	SummaryQueueProgress,
 } from "../types";
 import { t } from "../i18n";
-import { callLlmText, callLlmTextWithMeta } from "./llm-client";
+import { callLlmTextWithMeta } from "./llm-client";
 import { buildHighEffortSourceBundle } from "./huggingface-paper-client";
 import { sanitizeMarkdownForObsidian } from "./obsidian-markdown-utils";
 import { recommendRelatedPapers } from "./related-paper-recommender";
@@ -602,7 +602,7 @@ function buildPointerMap(bundle: HighEffortSourceBundle): Map<string, MarkdownCo
 	return new Map(pointers.map((pointer) => [pointer.id, pointer]));
 }
 
-function safeJsonParse<T>(value: string, fallback: T): T {
+function _safeJsonParse<T>(value: string, fallback: T): T {
 	const parsed = tryJsonParse<T>(value);
 	return parsed ?? fallback;
 }
@@ -982,7 +982,7 @@ function ensurePlannerCoverage(
 	};
 }
 
-function normalizePlannerResult(
+function _normalizePlannerResult(
 	raw: HighEffortPlannerResult,
 	bundle: HighEffortSourceBundle,
 	language: PaperAnalyzerSettings["language"]
@@ -1100,7 +1100,7 @@ function buildRuleBasedPlanner(
 	);
 }
 
-function getPlannerPrompt(
+function _getPlannerPrompt(
 	settings: PaperAnalyzerSettings,
 	effort: SummaryEffort = "high"
 ): string {
@@ -1256,7 +1256,7 @@ function getFormulaRepairPrompt(settings: PaperAnalyzerSettings): string {
 	].join("\n\n");
 }
 
-function getReviewerPrompt(settings: PaperAnalyzerSettings): string {
+function _getReviewerPrompt(settings: PaperAnalyzerSettings): string {
 	if (settings.language === "zh-CN") {
 		return [
 			"你是一名科研教程审稿助手。请检查草稿是否过于凝练、有没有未解释的新概念、公式变量缺失说明、或图文脱节。",
@@ -1278,7 +1278,7 @@ function getReviewerPrompt(settings: PaperAnalyzerSettings): string {
 	].join("\n\n");
 }
 
-function getExpansionPrompt(settings: PaperAnalyzerSettings): string {
+function _getExpansionPrompt(settings: PaperAnalyzerSettings): string {
 	if (settings.language === "zh-CN") {
 		return [
 			"你是一名科研教程补讲助手。请根据 revision request 和指定原文指针写一小段补充说明。",
@@ -1298,7 +1298,7 @@ function getExpansionPrompt(settings: PaperAnalyzerSettings): string {
 	].join("\n\n");
 }
 
-async function callJson<T>(
+async function _callJson<T>(
 	config: LlmConfig,
 	systemPrompt: string,
 	userContent: string,
@@ -1318,7 +1318,7 @@ async function callJson<T>(
 	return response.parsed ?? fallback;
 }
 
-function buildPlannerUserContent(bundle: HighEffortSourceBundle, settings: PaperAnalyzerSettings): string {
+function _buildPlannerUserContent(bundle: HighEffortSourceBundle, settings: PaperAnalyzerSettings): string {
 	if (settings.language === "zh-CN") {
 		return [
 			`论文标题: ${bundle.paperTitle}`,
@@ -1411,7 +1411,7 @@ function formatAvailableImagesBlock(
 	return [header, ...lines].join("\n");
 }
 
-function findAdjacentImages(
+function _findAdjacentImages(
 	bundle: HighEffortSourceBundle,
 	sectionPointer: MarkdownContentPointer,
 	max = 4
@@ -1461,7 +1461,7 @@ function buildFormulaUserContent(
 	].join("\n\n");
 }
 
-function buildReviewerUserContent(
+function _buildReviewerUserContent(
 	bundle: HighEffortSourceBundle,
 	draft: string,
 	planner: HighEffortPlannerResult,
@@ -1500,7 +1500,7 @@ function buildReviewerUserContent(
 	].join("\n\n");
 }
 
-function buildExpansionUserContent(
+function _buildExpansionUserContent(
 	revision: HighEffortRevisionRequest,
 	pointers: MarkdownContentPointer[],
 	settings: PaperAnalyzerSettings
@@ -1922,7 +1922,7 @@ function mergeDraft(
 	}).filter(Boolean).join("\n\n");
 }
 
-function normalizeRevisionRequests(
+function _normalizeRevisionRequests(
 	raw: { revisionRequests?: unknown[] },
 	bundle: HighEffortSourceBundle
 ): HighEffortRevisionRequest[] {

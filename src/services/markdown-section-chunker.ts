@@ -358,7 +358,7 @@ export function indexMarkdownContentPointers(markdown: string): MarkdownContentP
 	const images: MarkdownContentPointer[] = [];
 
 	for (const chunk of chunks) {
-		for (const [index, range] of collectParagraphRanges(chunk.content).entries()) {
+		for (const [_index, range] of collectParagraphRanges(chunk.content).entries()) {
 			paragraphs.push(
 				buildPointer(
 					"paragraph",

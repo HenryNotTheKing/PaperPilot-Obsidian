@@ -22,6 +22,21 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		plugins: {
+			"@typescript-eslint": tseslint.plugin,
+		},
+		rules: {
+			"@typescript-eslint/no-unused-vars": [
+				"warn",
+				{
+					argsIgnorePattern: "^_",
+					varsIgnorePattern: "^_",
+					caughtErrorsIgnorePattern: "^_",
+				},
+			],
+		},
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",
