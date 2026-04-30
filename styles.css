@@ -41,7 +41,7 @@ available in the app when your plugin is enabled.
 	background: rgba(60, 200, 100, 0.84);
 }
 
-/* AI Paper Analyzer — Import Modal */
+/* Paper Pilot — Import Modal */
 .paper-analyzer-modal .paper-analyzer-steps {
 	margin-top: 12px;
 	padding: 8px 0;
@@ -645,7 +645,7 @@ available in the app when your plugin is enabled.
 	background: color-mix(in srgb, var(--background-modifier-border) 88%, var(--background-primary));
 }
 
-/* AI Paper Analyzer — Summary Modal effort setting (flat, border-bottom only) */
+/* Paper Pilot — Summary Modal effort setting (flat, border-bottom only) */
 .paper-analyzer-modal .paper-analyzer-summary-effort-setting {
 	margin: 0;
 	padding: 14px 0;
@@ -660,7 +660,7 @@ available in the app when your plugin is enabled.
 	padding-right: 0;
 }
 
-/* AI Paper Analyzer — Analyze Modal */
+/* Paper Pilot — Analyze Modal */
 .paper-analyzer-btn-wrap {
 	display: flex;
 	justify-content: flex-start;
