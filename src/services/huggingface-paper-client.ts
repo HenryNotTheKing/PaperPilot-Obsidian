@@ -329,7 +329,7 @@ function isSubstantiveSection(pointer: { content: string; sectionPath: readonly 
 		.replace(/```[\s\S]*?```/g, "")
 		.replace(/!\[[^\]]*\]\([^)]*\)/g, "")
 		.replace(/\\[a-zA-Z]+(\{[^}]*\})*/g, "")
-		.replace(/[#>*_`~|\-\\{}\[\]()]/g, " ")
+		.replace(/[#>*_`~|\-\\{}[\]()]/g, " ")
 		.replace(/\s+/g, " ")
 		.trim();
 	if (stripped.length >= 80) return true;

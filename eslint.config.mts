@@ -33,5 +33,7 @@ export default tseslint.config(
 		"tests/**",
 		"vitest.config.ts",
 		"pdf.worker.min.mjs",
+		"temp.js",
+		"temp.*.js",
 	]),
 );

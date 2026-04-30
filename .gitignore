@@ -37,3 +37,8 @@ CLAUDE.md
 # Local test screenshots (committed explicitly to screenshots/ when needed)
 screenshots/settings-overview.png
 
+
+# Local scratch / experiments
+temp.js
+temp.*.js
+
