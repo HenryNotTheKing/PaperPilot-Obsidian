@@ -255,6 +255,8 @@ export interface Translations {
     scopeLabel: string;
     scopeCurrent: string;
     scopeByTag: string;
+    formatBibtex: string;
+    formatIeee: string;
     tagLabel: string;
     tagDesc: string;
     tagPlaceholder: string;
@@ -551,6 +553,8 @@ const en: Translations = {
     scopeLabel: "Scope",
     scopeCurrent: "Current note",
     scopeByTag: "By tag",
+    formatBibtex: "BibTeX",
+    formatIeee: "IEEE",
     tagLabel: "Tag",
     tagDesc: "Notes tagged with this tag will be included.",
     tagPlaceholder: "e.g. papers/transformer",
@@ -859,6 +863,8 @@ const zhCN: Translations = {
     scopeLabel: "范围",
     scopeCurrent: "当前笔记",
     scopeByTag: "按 Tag",
+    formatBibtex: "BibTeX",
+    formatIeee: "IEEE",
     tagLabel: "Tag",
     tagDesc: "将导出带有此 Tag 的所有笔记对应的引用。",
     tagPlaceholder: "例如 papers/transformer",

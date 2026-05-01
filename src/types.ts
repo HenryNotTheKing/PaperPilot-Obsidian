@@ -614,6 +614,7 @@ export interface CitationRecord {
 }
 
 export type CitationFormat = "bibtex" | "ieee";
+export type CitationExportFormat = CitationFormat | `custom:${string}`;
 
 export interface CitationCustomFormat {
 	name: string;
@@ -622,7 +623,7 @@ export interface CitationCustomFormat {
 }
 
 export interface CitationExportSettings {
-	defaultFormat: CitationFormat | string;
+	defaultFormat: CitationExportFormat;
 	customFormats: CitationCustomFormat[];
 }
 

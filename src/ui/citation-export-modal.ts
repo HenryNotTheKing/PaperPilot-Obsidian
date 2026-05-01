@@ -1,6 +1,6 @@
 import { App, ButtonComponent, Modal, Notice, Setting, TFile } from "obsidian";
 import type PaperAnalyzerPlugin from "../main";
-import type { CitationRecord } from "../types";
+import type { CitationExportFormat, CitationRecord } from "../types";
 import {
 	resolveNoteMetadata,
 	resolveTaggedNotes,
@@ -15,7 +15,11 @@ import {
 import { t } from "../i18n";
 
 type ExportScope = "current" | "tag";
-type Format = "bibtex" | "ieee" | string;
+type Format = CitationExportFormat;
+
+type MetadataCacheWithTags = App["metadataCache"] & {
+	getTags?: () => Record<string, number>;
+};
 
 const MAX_SUGGESTIONS = 8;
 
@@ -90,7 +94,7 @@ export class CitationExportModal extends Modal {
 
 		// ── Tag input row (shown when scope === "tag") ─────────────────────────
 		this.tagRow = contentEl.createDiv({ cls: "paper-analyzer-citation-tag-row" });
-		this.tagRow.style.display = this.exportScope === "tag" ? "" : "none";
+		this.tagRow.toggleClass("is-hidden", this.exportScope !== "tag");
 
 		const tagSetting = new Setting(this.tagRow)
 			.setName(t("citationExport.tagLabel"))
@@ -103,11 +107,10 @@ export class CitationExportModal extends Modal {
 				// Create dropdown inside the control element so it floats below the input
 				const controlEl = text.inputEl.parentElement as HTMLElement;
 				if (controlEl) {
-					controlEl.style.position = "relative";
+					controlEl.addClass("paper-analyzer-citation-tag-control");
 					this.suggestionsEl = controlEl.createDiv({
-						cls: "paper-analyzer-citation-tag-suggestions",
+						cls: "paper-analyzer-citation-tag-suggestions is-hidden",
 					});
-					this.suggestionsEl.style.display = "none";
 				}
 
 				text.inputEl.addEventListener("input", () => {
@@ -140,14 +143,14 @@ export class CitationExportModal extends Modal {
 		new Setting(contentEl)
 			.setName(t("citationExport.formatLabel"))
 			.addDropdown((dd) => {
-				dd.addOption("bibtex", "BibTeX");
-				dd.addOption("ieee", "IEEE");
+				dd.addOption("bibtex", t("citationExport.formatBibtex"));
+				dd.addOption("ieee", t("citationExport.formatIeee"));
 				for (const cf of this.plugin.settings.citationExport.customFormats) {
 					dd.addOption(`custom:${cf.name}`, cf.name);
 				}
 				dd.setValue(this.format);
 				dd.onChange((v) => {
-					this.format = v;
+					this.format = v as CitationExportFormat;
 					this.updateVenuePresetVisibility();
 					this.clearPreview();
 				});
@@ -157,7 +160,7 @@ export class CitationExportModal extends Modal {
 		this.venuePresetRow = contentEl.createDiv({
 			cls: "paper-analyzer-citation-venue-row",
 		});
-		this.venuePresetRow.style.display = this.format === "bibtex" ? "" : "none";
+		this.venuePresetRow.toggleClass("is-hidden", this.format !== "bibtex");
 
 		new Setting(this.venuePresetRow)
 			.setName(t("citationExport.venuePresetLabel"))
@@ -176,9 +179,8 @@ export class CitationExportModal extends Modal {
 
 		// ── Progress indicator ─────────────────────────────────────────────────
 		this.progressEl = contentEl.createDiv({
-			cls: "paper-analyzer-citation-progress setting-item-description",
+			cls: "paper-analyzer-citation-progress setting-item-description is-hidden",
 		});
-		this.progressEl.style.cssText = "padding-left:0; display:none;";
 
 		// ── Field guide (hidden by default; revealed when resolve fails) ───────
 		this.guideEl = contentEl.createDiv({
@@ -192,8 +194,7 @@ export class CitationExportModal extends Modal {
 		const previewSection = contentEl.createDiv({ cls: "paper-analyzer-citation-preview" });
 		previewSection.createEl("div", {
 			text: t("citationExport.previewLabel"),
-			cls: "setting-item-name",
-			attr: { style: "margin-bottom: 6px; font-weight: 600;" },
+			cls: "setting-item-name paper-analyzer-citation-preview-label",
 		});
 		this.previewEl = previewSection.createEl("textarea", {
 			cls: "paper-analyzer-citation-textarea",
@@ -201,7 +202,6 @@ export class CitationExportModal extends Modal {
 				readonly: "true",
 				rows: "12",
 				placeholder: t("citationExport.previewPlaceholder"),
-				style: "width:100%; font-family: monospace; font-size: 12px; resize: vertical;",
 			},
 		});
 
@@ -230,8 +230,8 @@ export class CitationExportModal extends Modal {
 	// ── Tag autocomplete ──────────────────────────────────────────────────────
 
 	private getAllVaultTags(): string[] {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const tagMap: Record<string, number> = (this.app.metadataCache as any).getTags?.() ?? {};
+		const metadataCache = this.app.metadataCache as MetadataCacheWithTags;
+		const tagMap = metadataCache.getTags?.() ?? {};
 		return Object.keys(tagMap)
 			.map((tag) => (tag.startsWith("#") ? tag.slice(1) : tag))
 			.sort((a, b) => a.localeCompare(b));
@@ -267,7 +267,7 @@ export class CitationExportModal extends Modal {
 
 			if (query) {
 				// Bold the typed prefix
-				const prefixSpan = item.createEl("span", {
+				item.createEl("span", {
 					cls: "paper-analyzer-citation-tag-suggestion-prefix",
 					text: match.slice(0, this.tagInput.length),
 				});
@@ -282,7 +282,7 @@ export class CitationExportModal extends Modal {
 			});
 		}
 
-		this.suggestionsEl.style.display = "";
+		this.suggestionsEl.removeClass("is-hidden");
 	}
 
 	private selectSuggestion(tag: string): void {
@@ -299,12 +299,12 @@ export class CitationExportModal extends Modal {
 	}
 
 	private hideSuggestions(): void {
-		if (this.suggestionsEl) this.suggestionsEl.style.display = "none";
+		this.suggestionsEl?.addClass("is-hidden");
 		this.activeSuggestionIdx = -1;
 	}
 
 	private handleSuggestionKeydown(e: KeyboardEvent): void {
-		if (!this.suggestionsEl || this.suggestionsEl.style.display === "none") return;
+		if (!this.suggestionsEl || this.suggestionsEl.hasClass("is-hidden")) return;
 		const items = Array.from(
 			this.suggestionsEl.querySelectorAll<HTMLElement>(
 				".paper-analyzer-citation-tag-suggestion"
@@ -345,13 +345,13 @@ export class CitationExportModal extends Modal {
 
 	private updateScopeVisibility(): void {
 		if (this.tagRow) {
-			this.tagRow.style.display = this.exportScope === "tag" ? "" : "none";
+			this.tagRow.toggleClass("is-hidden", this.exportScope !== "tag");
 		}
 	}
 
 	private updateVenuePresetVisibility(): void {
 		if (this.venuePresetRow) {
-			this.venuePresetRow.style.display = this.format === "bibtex" ? "" : "none";
+			this.venuePresetRow.toggleClass("is-hidden", this.format !== "bibtex");
 		}
 	}
 
@@ -380,7 +380,7 @@ export class CitationExportModal extends Modal {
 	private setProgress(text: string): void {
 		if (!this.progressEl) return;
 		this.progressEl.setText(text);
-		this.progressEl.style.display = text ? "" : "none";
+		this.progressEl.toggleClass("is-hidden", !text);
 	}
 
 	private showGuide(): void {

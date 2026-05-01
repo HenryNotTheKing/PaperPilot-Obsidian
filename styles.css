@@ -927,6 +927,41 @@ available in the app when your plugin is enabled.
 	padding-right: 0;
 }
 
+.paper-analyzer-settings-inline-row {
+	border-top: none;
+}
+
+.paper-analyzer-citation-custom-template-input {
+	width: 240px;
+}
+
+.paper-analyzer-citation-tag-row.is-hidden,
+.paper-analyzer-citation-venue-row.is-hidden,
+.paper-analyzer-citation-tag-suggestions.is-hidden,
+.paper-analyzer-citation-progress.is-hidden {
+	display: none;
+}
+
+.paper-analyzer-citation-tag-control {
+	position: relative;
+}
+
+.paper-analyzer-citation-progress {
+	padding-left: 0;
+}
+
+.paper-analyzer-citation-preview-label {
+	margin-bottom: 6px;
+	font-weight: 600;
+}
+
+.paper-analyzer-citation-textarea {
+	width: 100%;
+	font-family: monospace;
+	font-size: 12px;
+	resize: vertical;
+}
+
 .paper-analyzer-citation-tag-row .setting-item-description {
 	overflow: visible;
 	text-overflow: clip;

@@ -4,6 +4,7 @@ import {
 	DEFAULT_DOI_FIELD_ALIASES,
 	DEFAULT_EXTRACTION_PROMPT,
 	DEFAULT_TYPE_COLOR_MAP,
+	type CitationExportFormat,
 	CitationSidebarSettings,
 	getDefaultSummaryPrompt,
 	type LlmProvider,
@@ -882,14 +883,15 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 			.setName(t("settings.citationExportDefaultFormat"))
 			.setDesc(t("settings.citationExportDefaultFormatDesc"))
 			.addDropdown((dd) => {
-				dd.addOption("bibtex", "BibTeX");
-				dd.addOption("ieee", "IEEE");
+				dd.addOption("bibtex", t("citationExport.formatBibtex"));
+				dd.addOption("ieee", t("citationExport.formatIeee"));
 				for (const cf of this.plugin.settings.citationExport.customFormats) {
 					dd.addOption(`custom:${cf.name}`, cf.name);
 				}
 				dd.setValue(this.plugin.settings.citationExport.defaultFormat);
 				dd.onChange(async (value) => {
-					this.plugin.settings.citationExport.defaultFormat = value;
+					this.plugin.settings.citationExport.defaultFormat =
+						value as CitationExportFormat;
 					await this.plugin.saveSettings();
 				});
 			});
@@ -930,7 +932,7 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 							this.plugin.settings.citationExport.customFormats[i]!.template = value;
 							await this.plugin.saveSettings();
 						});
-					text.inputEl.style.width = "240px";
+					text.inputEl.addClass("paper-analyzer-citation-custom-template-input");
 				})
 				.addButton((btn) =>
 					btn
@@ -943,7 +945,7 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 						})
 				);
 			// No name label needed for inline rows
-			row.settingEl.style.borderTop = "none";
+			row.settingEl.addClass("paper-analyzer-settings-inline-row");
 		}
 	}
 
