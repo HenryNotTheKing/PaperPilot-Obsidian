@@ -912,3 +912,92 @@ available in the app when your plugin is enabled.
 	font-size: 12px;
 	border-radius: 8px;
 }
+/* ── Citation export modal ───────────────────────────────────────────────── */
+
+.paper-analyzer-citation-export-modal .setting-item:not(.setting-item-heading) {
+	padding-left: 0;
+	padding-right: 0;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.paper-analyzer-citation-export-modal .setting-item:not(.setting-item-heading) .setting-item-info {
+	padding-right: 0;
+}
+
+.paper-analyzer-citation-tag-row .setting-item-description {
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.paper-analyzer-citation-tag-suggestions {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+	z-index: 200;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+	overflow: hidden;
+	max-height: 240px;
+	overflow-y: auto;
+}
+
+.paper-analyzer-citation-tag-suggestion {
+	display: block;
+	padding: 7px 12px;
+	font-size: 13px;
+	cursor: pointer;
+	color: var(--text-normal);
+	border-bottom: 1px solid var(--background-modifier-border);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.paper-analyzer-citation-tag-suggestion:last-child {
+	border-bottom: none;
+}
+
+.paper-analyzer-citation-tag-suggestion:hover,
+.paper-analyzer-citation-tag-suggestion.is-active {
+	background: var(--background-modifier-hover);
+}
+
+.paper-analyzer-citation-tag-suggestion-prefix {
+	font-weight: 600;
+}
+
+/* Action button row — no card wrapper, just inline flex */
+.paper-analyzer-citation-btn-row {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding-top: 2px;
+}
+
+/* Field guide: hidden by default, revealed via .is-visible when resolve fails */
+.paper-analyzer-citation-guide {
+	display: none;
+	margin: 4px 0 8px;
+	padding: 10px 14px;
+	border-radius: 8px;
+	font-size: 12.5px;
+	line-height: 1.65;
+	color: var(--text-muted);
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.paper-analyzer-citation-guide.is-visible {
+	display: block;
+}
