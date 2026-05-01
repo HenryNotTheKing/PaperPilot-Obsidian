@@ -18,6 +18,7 @@ import { ImportModal } from "./ui/import-modal";
 import { AnalyzeModal } from "./ui/analyze-modal";
 import { SummaryModal } from "./ui/summary-modal";
 import { CitationSidebarView, CITATION_SIDEBAR_TYPE } from "./ui/citation-sidebar";
+import { CitationExportModal } from "./ui/citation-export-modal";
 import { PdfHighlightLayer } from "./ui/pdf-highlight-layer";
 import { setPdfWorkerSrc } from "./services/pdf-parser";
 import { AnalyzeQueue } from "./services/analyze-queue";
@@ -118,6 +119,25 @@ export default class PaperAnalyzerPlugin extends Plugin {
 				return true;
 			},
 		});
+
+		this.addCommand({
+			id: "export-citation-current",
+			name: t("commands.exportCitationCurrent"),
+			checkCallback: (checking: boolean) => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile || activeFile.extension !== "md") return false;
+				if (!checking) new CitationExportModal(this.app, this, activeFile, "current").open();
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "export-citation-by-tag",
+			name: t("commands.exportCitationByTag"),
+			callback: () => {
+				new CitationExportModal(this.app, this, null, "tag").open();
+			},
+		});
 	}
 
 	private registerRibbon(): void {
@@ -141,6 +161,8 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		cmdManager.commands.removeCommand("analyze-arxiv-paper");
 		cmdManager.commands.removeCommand("summarize-current-paper");
 		cmdManager.commands.removeCommand("open-citation-sidebar");
+		cmdManager.commands.removeCommand("export-citation-current");
+		cmdManager.commands.removeCommand("export-citation-by-tag");
 		this.registerCommands();
 
 		// Destroy old ribbon icons and recreate with updated tooltips

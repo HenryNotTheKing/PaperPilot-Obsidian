@@ -594,6 +594,38 @@ export interface CitationSidebarSettings {
 	doiFieldAliases: string[];
 }
 
+// ─── Citation Export ─────────────────────────────────────────────────────────
+
+export type CitationBibEntryType = "article" | "inproceedings" | "misc";
+
+/** Resolved citation data for a single paper, ready for formatting. */
+export interface CitationRecord {
+	title: string;
+	authors: string[];
+	year: number;
+	arxivId?: string;
+	doi?: string;
+	/** Conference / journal name (from frontmatter venue/journal/booktitle) */
+	venue?: string;
+	entryType?: CitationBibEntryType;
+	url?: string;
+	/** Frontmatter fields that were missing and could not be resolved */
+	missingFields: string[];
+}
+
+export type CitationFormat = "bibtex" | "ieee";
+
+export interface CitationCustomFormat {
+	name: string;
+	/** Template with placeholders: {title} {authors} {year} {doi} {arxiv_id} {url} {venue} */
+	template: string;
+}
+
+export interface CitationExportSettings {
+	defaultFormat: CitationFormat | string;
+	customFormats: CitationCustomFormat[];
+}
+
 declare module "obsidian" {
 	interface Workspace {
 		on(

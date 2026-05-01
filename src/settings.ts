@@ -12,7 +12,7 @@ import {
 	normalizeLlmProvider,
 	normalizeSummaryEffort,
 } from "./types";
-import type { StoredHighlight } from "./types";
+import type { StoredHighlight, CitationExportSettings } from "./types";
 import type PaperAnalyzerPlugin from "./main";
 import { DEFAULT_PAPER_NOTE_TEMPLATE } from "./services/arxiv-client";
 import { t, setLocale, getLocale, getTranslations, type LocaleId } from "./i18n";
@@ -69,6 +69,7 @@ export interface PaperAnalyzerSettings {
 	analyzeQueue: import("./types").QueueItem[];
 	summaryQueue: import("./types").SummaryQueueItem[];
 	citationSidebar: CitationSidebarSettings;
+	citationExport: CitationExportSettings;
 	/** Persisted highlight data keyed by PDF vault path */
 	highlights: Record<string, StoredHighlight[]>;
 }
@@ -120,6 +121,10 @@ export const DEFAULT_SETTINGS: PaperAnalyzerSettings = {
 		semanticScholarApiKey: "",
 		arxivFieldAliases: [...DEFAULT_ARXIV_FIELD_ALIASES],
 		doiFieldAliases: [...DEFAULT_DOI_FIELD_ALIASES],
+	},
+	citationExport: {
+		defaultFormat: "bibtex",
+		customFormats: [],
 	},
 };
 
@@ -863,6 +868,83 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 					});
 				text.inputEl.type = "password";
 			});
+
+		// --- Citation Export ---
+		new Setting(containerEl)
+			.setName(t("settings.citationExport"))
+			.setHeading();
+		containerEl.createEl("p", {
+			text: t("settings.citationExportDesc"),
+			cls: "setting-item-description",
+		});
+
+		new Setting(containerEl)
+			.setName(t("settings.citationExportDefaultFormat"))
+			.setDesc(t("settings.citationExportDefaultFormatDesc"))
+			.addDropdown((dd) => {
+				dd.addOption("bibtex", "BibTeX");
+				dd.addOption("ieee", "IEEE");
+				for (const cf of this.plugin.settings.citationExport.customFormats) {
+					dd.addOption(`custom:${cf.name}`, cf.name);
+				}
+				dd.setValue(this.plugin.settings.citationExport.defaultFormat);
+				dd.onChange(async (value) => {
+					this.plugin.settings.citationExport.defaultFormat = value;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName(t("settings.citationCustomFormats"))
+			.setDesc(t("settings.citationCustomFormatsDesc"))
+			.addButton((btn) =>
+				btn
+					.setButtonText(t("settings.citationAddCustomFormat"))
+					.onClick(async () => {
+						this.plugin.settings.citationExport.customFormats.push({
+							name: `Format ${this.plugin.settings.citationExport.customFormats.length + 1}`,
+							template: "{authors} ({year}). {title}. {venue}.",
+						});
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		for (let i = 0; i < this.plugin.settings.citationExport.customFormats.length; i++) {
+			const cf = this.plugin.settings.citationExport.customFormats[i]!;
+			const row = new Setting(containerEl)
+				.addText((text) =>
+					text
+						.setPlaceholder(t("settings.citationCustomFormatName"))
+						.setValue(cf.name)
+						.onChange(async (value) => {
+							this.plugin.settings.citationExport.customFormats[i]!.name = value;
+							await this.plugin.saveSettings();
+						})
+				)
+				.addText((text) => {
+					text
+						.setPlaceholder("{authors} ({year}). {title}.")
+						.setValue(cf.template)
+						.onChange(async (value) => {
+							this.plugin.settings.citationExport.customFormats[i]!.template = value;
+							await this.plugin.saveSettings();
+						});
+					text.inputEl.style.width = "240px";
+				})
+				.addButton((btn) =>
+					btn
+						.setIcon("trash")
+						.setTooltip(t("settings.citationDeleteCustomFormat"))
+						.onClick(async () => {
+							this.plugin.settings.citationExport.customFormats.splice(i, 1);
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+			// No name label needed for inline rows
+			row.settingEl.style.borderTop = "none";
+		}
 	}
 
 	private addHighlightColorSetting(

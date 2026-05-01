@@ -117,6 +117,15 @@ export interface Translations {
     semanticScholarApiKey: string;
     semanticScholarApiKeyDesc: string;
     semanticScholarApiKeyPlaceholder: string;
+    citationExport: string;
+    citationExportDesc: string;
+    citationExportDefaultFormat: string;
+    citationExportDefaultFormatDesc: string;
+    citationCustomFormats: string;
+    citationCustomFormatsDesc: string;
+    citationAddCustomFormat: string;
+    citationDeleteCustomFormat: string;
+    citationCustomFormatName: string;
   };
   notices: {
     noArxivId: string;
@@ -164,6 +173,8 @@ export interface Translations {
     analyzeCurrentPaper: string;
     summarizeCurrentPaper: string;
     openCitationSidebar: string;
+    exportCitationCurrent: string;
+    exportCitationByTag: string;
     ribbonImport: string;
     ribbonCitationGraph: string;
   };
@@ -238,6 +249,36 @@ export interface Translations {
     unknownAuthors: string;
     noAbstract: string;
     relevanceInfluence: string;
+  };
+  citationExport: {
+    heading: string;
+    scopeLabel: string;
+    scopeCurrent: string;
+    scopeByTag: string;
+    tagLabel: string;
+    tagDesc: string;
+    tagPlaceholder: string;
+    tagNoMatch: string;
+    tagMatchCount: string;
+    formatLabel: string;
+    venuePresetLabel: string;
+    venuePresetDesc: string;
+    venuePresetNone: string;
+    previewLabel: string;
+    previewPlaceholder: string;
+    generateBtn: string;
+    copyBtn: string;
+    noCurrentNote: string;
+    resolvingOne: string;
+    noIdFound: string;
+    enterTag: string;
+    resolvingTag: string;
+    resolvingProgress: string;
+    noMatchingNotes: string;
+    missingFieldsWarning: string;
+    copiedNotice: string;
+    guideTitle: string;
+    guideBody: string;
   };
   systemPrompt: {
     extractionPrompt: string;
@@ -361,6 +402,15 @@ const en: Translations = {
     semanticScholarApiKey: "Semantic Scholar API key",
     semanticScholarApiKeyDesc: "Optional — without a key the sidebar works but is rate-limited to 1 req/s. Get a free key at semanticscholar.org/product/api.",
     semanticScholarApiKeyPlaceholder: "Enter your Semantic Scholar API key",
+    citationExport: "Citation export",
+    citationExportDesc: "Configure default citation format and custom format templates.",
+    citationExportDefaultFormat: "Default format",
+    citationExportDefaultFormatDesc: "The format pre-selected when opening the export modal.",
+    citationCustomFormats: "Custom formats",
+    citationCustomFormatsDesc: "Define reusable citation templates. Placeholders: {title} {authors} {year} {doi} {arxiv_id} {url} {venue}",
+    citationAddCustomFormat: "Add format",
+    citationDeleteCustomFormat: "Delete format",
+    citationCustomFormatName: "Format name",
   },
   notices: {
     noArxivId: "No arxiv_id in frontmatter — import the paper first",
@@ -408,6 +458,8 @@ const en: Translations = {
     analyzeCurrentPaper: "Analyze current paper with AI",
     summarizeCurrentPaper: "Summarize current paper with AI",
     openCitationSidebar: "Open citation graph sidebar",
+    exportCitationCurrent: "Export citation for current note",
+    exportCitationByTag: "Export citations by tag",
     ribbonImport: "Import arxiv paper",
     ribbonCitationGraph: "Citation graph",
   },
@@ -493,6 +545,36 @@ const en: Translations = {
     unknownAuthors: "Unknown authors",
     noAbstract: "No abstract available.",
     relevanceInfluence: "Relevance: {similarity}%  Influence: {influence}%",
+  },
+  citationExport: {
+    heading: "Export citations",
+    scopeLabel: "Scope",
+    scopeCurrent: "Current note",
+    scopeByTag: "By tag",
+    tagLabel: "Tag",
+    tagDesc: "Notes tagged with this tag will be included.",
+    tagPlaceholder: "e.g. papers/transformer",
+    tagNoMatch: "No notes found with tag \"{tag}\".",
+    tagMatchCount: "{count} note(s) found with tag \"{tag}\".",
+    formatLabel: "Format",
+    venuePresetLabel: "Venue preset",
+    venuePresetDesc: "Override the booktitle for BibTeX @inproceedings entries.",
+    venuePresetNone: "— None —",
+    previewLabel: "Preview",
+    previewPlaceholder: "Click \"Generate\" to preview the output.",
+    generateBtn: "Generate",
+    copyBtn: "Copy to clipboard",
+    noCurrentNote: "No active Markdown note.",
+    resolvingOne: "Resolving metadata…",
+    noIdFound: "No arxiv_id or doi found in frontmatter.",
+    enterTag: "Please enter a tag.",
+    resolvingTag: "Resolving notes for tag \"{tag}\"…",
+    resolvingProgress: "Resolved {done} / {total}…",
+    noMatchingNotes: "No matching notes found for tag \"{tag}\".",
+    missingFieldsWarning: "Warning: missing fields — {fields}",
+    copiedNotice: "Copied {count} citation(s) to clipboard.",
+    guideTitle: "Which fields are read?",
+    guideBody: "Reads from note frontmatter: arxiv_id / doi (required), title, published or year, authors (optional — auto-fetched from arXiv if missing), venue / journal / booktitle (optional). Custom template placeholders: {title} {authors} {year} {doi} {arxiv_id} {url} {venue}",
   },
   systemPrompt: {
     extractionPrompt: `You are a research analyst. Scan the given academic paper section and mark important sentences.
@@ -628,6 +710,15 @@ const zhCN: Translations = {
     semanticScholarApiKey: "Semantic Scholar API 密钥",
     semanticScholarApiKeyDesc: "可选 -- 无密钥时侧边栏可用但限速 1 req/s。在 semanticscholar.org/product/api 获取免费密钥。",
     semanticScholarApiKeyPlaceholder: "输入您的 Semantic Scholar API 密钥",
+    citationExport: "引用导出",
+    citationExportDesc: "配置默认引用格式和自定义格式模板。",
+    citationExportDefaultFormat: "默认格式",
+    citationExportDefaultFormatDesc: "打开导出面板时预选的格式。",
+    citationCustomFormats: "自定义格式",
+    citationCustomFormatsDesc: "定义可复用的引用模板。占位符：{title} {authors} {year} {doi} {arxiv_id} {url} {venue}",
+    citationAddCustomFormat: "添加格式",
+    citationDeleteCustomFormat: "删除格式",
+    citationCustomFormatName: "格式名称",
   },
   notices: {
     noArxivId: "前置信息中没有 arxiv_id -- 请先导入论文",
@@ -675,6 +766,8 @@ const zhCN: Translations = {
     analyzeCurrentPaper: "用 AI 分析当前论文",
     summarizeCurrentPaper: "用 AI 总结当前论文",
     openCitationSidebar: "打开引用图侧边栏",
+    exportCitationCurrent: "导出当前笔记的引用",
+    exportCitationByTag: "按 Tag 批量导出引用",
     ribbonImport: "导入论文",
     ribbonCitationGraph: "引用图",
   },
@@ -760,6 +853,36 @@ const zhCN: Translations = {
     unknownAuthors: "作者未知",
     noAbstract: "无摘要。",
     relevanceInfluence: "相关性: {similarity}%  影响力: {influence}%",
+  },
+  citationExport: {
+    heading: "导出引用",
+    scopeLabel: "范围",
+    scopeCurrent: "当前笔记",
+    scopeByTag: "按 Tag",
+    tagLabel: "Tag",
+    tagDesc: "将导出带有此 Tag 的所有笔记对应的引用。",
+    tagPlaceholder: "例如 papers/transformer",
+    tagNoMatch: "未找到带有 Tag \"{tag}\" 的笔记。",
+    tagMatchCount: "找到 {count} 篇带有 Tag \"{tag}\" 的笔记。",
+    formatLabel: "格式",
+    venuePresetLabel: "期刊/会议预设",
+    venuePresetDesc: "覆盖 BibTeX @inproceedings 条目的 booktitle 字段。",
+    venuePresetNone: "— 不使用预设 —",
+    previewLabel: "预览",
+    previewPlaceholder: "点击「生成」预览输出内容。",
+    generateBtn: "生成",
+    copyBtn: "复制到剪贴板",
+    noCurrentNote: "当前没有活跃的 Markdown 笔记。",
+    resolvingOne: "正在解析元数据…",
+    noIdFound: "frontmatter 中未找到 arxiv_id 或 doi。",
+    enterTag: "请输入 Tag。",
+    resolvingTag: "正在解析 Tag \"{tag}\" 下的笔记…",
+    resolvingProgress: "已解析 {done} / {total}…",
+    noMatchingNotes: "Tag \"{tag}\" 下未找到匹配笔记。",
+    missingFieldsWarning: "警告：缺少字段 — {fields}",
+    copiedNotice: "已复制 {count} 条引用到剪贴板。",
+    guideTitle: "插件读取哪些字段？",
+    guideBody: "从笔记 frontmatter 中读取：arxiv_id / doi（必需）、title、published 或 year、authors（可选，缺失时自动从 arXiv API 获取）、venue / journal / booktitle（可选）。自定义模板占位符：{title} {authors} {year} {doi} {arxiv_id} {url} {venue}",
   },
   systemPrompt: {
     extractionPrompt: `你是一位研究分析师。扫描给定的学术论文章节并标记重要句子。
