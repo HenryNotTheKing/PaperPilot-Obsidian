@@ -61,6 +61,7 @@ Academic papers are dense skies — dozens of pages, hundreds of citations, mult
 | **Color-coded PDF highlights** | Highlights painted directly onto the PDF, color-mapped by category |
 | **Four summary modes** | Low / Medium / High / Extreme — trade speed for depth |
 | **Citation sidebar** | Cited and citing paper retrieval; vault similarity matching |
+| **Citation export** | Export citations from the current note or by tag in BibTeX, IEEE, or custom template formats |
 | **Background queues** | Analysis and summary jobs run without blocking the UI |
 | **Bilingual UI** | English and Simplified Chinese |
 | **Theme compatible** | Works with any Obsidian theme, light or dark |
@@ -135,6 +136,7 @@ The output length is governed by soft prompt-level guidance, not by hard token c
 | Highlight opacity | Overlay transparency (0.15 – 1.0) |
 | LLM concurrency | How many parallel LLM requests are allowed |
 | Citation sidebar | Depth, source, and display options for the citation panel |
+| Citation export | Default export format and reusable custom citation templates |
 
 ---
 
