@@ -9,9 +9,8 @@ import {
 	DEFAULT_SUMMARY_MEDIUM_PROMPT,
 	DEFAULT_SUMMARY_MEDIUM_PROMPT_ZH,
 	getDefaultSummaryPrompt,
-	normalizeLlmProvider,
-	normalizeSummaryEffort,
-} from "../src/types";
+} from "../src/prompts";
+import { normalizeLlmProvider, normalizeSummaryEffort } from "../src/types";
 
 describe("normalizeLlmProvider", () => {
 	it("accepts supported provider values", () => {

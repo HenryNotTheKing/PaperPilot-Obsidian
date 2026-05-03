@@ -2,17 +2,19 @@ import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
 import {
 	DEFAULT_ARXIV_FIELD_ALIASES,
 	DEFAULT_DOI_FIELD_ALIASES,
-	DEFAULT_EXTRACTION_PROMPT,
 	DEFAULT_TYPE_COLOR_MAP,
 	type CitationExportFormat,
 	CitationSidebarSettings,
-	getDefaultSummaryPrompt,
 	type LlmProvider,
 	type SummaryEffort,
 	normalizeCitationFieldAliases,
 	normalizeLlmProvider,
 	normalizeSummaryEffort,
 } from "./types";
+import {
+	DEFAULT_EXTRACTION_PROMPT,
+	getDefaultSummaryPrompt,
+} from "./prompts";
 import type { StoredHighlight, CitationExportSettings } from "./types";
 import type PaperAnalyzerPlugin from "./main";
 import { DEFAULT_PAPER_NOTE_TEMPLATE } from "./services/arxiv-client";
@@ -31,6 +33,7 @@ export function normalizeDuplicateImportAction(
 }
 
 export interface PaperAnalyzerSettings {
+	settingsVersion: number;
 	language: LocaleId;
 	attachmentFolderPath: string;
 	notesFolderPath: string;
@@ -76,6 +79,7 @@ export interface PaperAnalyzerSettings {
 }
 
 export const DEFAULT_SETTINGS: PaperAnalyzerSettings = {
+	settingsVersion: 1,
 	language: "en",
 	attachmentFolderPath: "Papers/PDFs",
 	notesFolderPath: "Papers/Notes",

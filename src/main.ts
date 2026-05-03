@@ -14,18 +14,14 @@ import {
 	PaperAnalyzerSettings,
 	PaperAnalyzerSettingTab,
 } from "./settings";
-import { ImportModal } from "./ui/import-modal";
-import { AnalyzeModal } from "./ui/analyze-modal";
-import { SummaryModal } from "./ui/summary-modal";
 import { CitationSidebarView, CITATION_SIDEBAR_TYPE } from "./ui/citation-sidebar";
-import { CitationExportModal } from "./ui/citation-export-modal";
-import { PdfHighlightLayer } from "./ui/pdf-highlight-layer";
 import { setPdfWorkerSrc } from "./services/pdf-parser";
 import { AnalyzeQueue } from "./services/analyze-queue";
 import { SummaryQueue } from "./services/summary-queue";
 import { extractArxivId } from "./services/arxiv-client";
 import { isCitationGraphFile } from "./services/paper-identity-resolver";
 import { t, setLocale } from "./i18n";
+import type { PdfHighlightLayer } from "./ui/pdf-highlight-layer";
 
 export default class PaperAnalyzerPlugin extends Plugin {
 	settings!: PaperAnalyzerSettings;
@@ -62,17 +58,21 @@ export default class PaperAnalyzerPlugin extends Plugin {
 
 		this.analyzeQueue = new AnalyzeQueue(this);
 		this.summaryQueue = new SummaryQueue(this);
-		void this.analyzeQueue.processNext();
-		void this.summaryQueue.processNext();
+
+		// Defer queue resume until Obsidian finishes its own startup
+		this.app.workspace.onLayoutReady(() => {
+			void this.analyzeQueue.processNext();
+			void this.summaryQueue.processNext();
+		});
 
 		// Mount highlight overlays on any already-open PDF leaves, and on future ones
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
-				this.refreshPdfHighlights();
+				void this.refreshPdfHighlights();
 			})
 		);
 		this.app.workspace.onLayoutReady(() => {
-			this.refreshPdfHighlights();
+			void this.refreshPdfHighlights();
 		});
 	}
 
@@ -80,7 +80,8 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		this.addCommand({
 			id: "import-arxiv-paper",
 			name: t("commands.importArxivPaper"),
-			callback: () => {
+			callback: async () => {
+				const { ImportModal } = await import("./ui/import-modal");
 				new ImportModal(this.app, this).open();
 			},
 		});
@@ -126,7 +127,12 @@ export default class PaperAnalyzerPlugin extends Plugin {
 			checkCallback: (checking: boolean) => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (!activeFile || activeFile.extension !== "md") return false;
-				if (!checking) new CitationExportModal(this.app, this, activeFile, "current").open();
+				if (!checking) {
+					void (async () => {
+						const { CitationExportModal } = await import("./ui/citation-export-modal");
+						new CitationExportModal(this.app, this, activeFile, "current").open();
+					})();
+				}
 				return true;
 			},
 		});
@@ -134,7 +140,8 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		this.addCommand({
 			id: "export-citation-by-tag",
 			name: t("commands.exportCitationByTag"),
-			callback: () => {
+			callback: async () => {
+				const { CitationExportModal } = await import("./ui/citation-export-modal");
 				new CitationExportModal(this.app, this, null, "tag").open();
 			},
 		});
@@ -144,7 +151,10 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		this.ribbonImportHandle = this.addRibbonIcon(
 			"file-down",
 			t("commands.ribbonImport"),
-			() => new ImportModal(this.app, this).open()
+			async () => {
+				const { ImportModal } = await import("./ui/import-modal");
+				new ImportModal(this.app, this).open();
+			}
 		);
 		this.ribbonCitationGraphHandle = this.addRibbonIcon(
 			"library",
@@ -204,6 +214,7 @@ export default class PaperAnalyzerPlugin extends Plugin {
 			const arxivId = extractArxivId(candidate);
 			if (arxivId) {
 				console.debug("[importAndAnalyze] matched arxivId:", arxivId, "from candidate:", candidate);
+				const { ImportModal } = await import("./ui/import-modal");
 				new ImportModal(this.app, this, [`https://arxiv.org/abs/${arxivId}`]).open();
 				return;
 			}
@@ -225,9 +236,11 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		this.highlightLayers = [];
 	}
 
-	refreshPdfHighlights(): void {
+	async refreshPdfHighlights(): Promise<void> {
 		const highlights = this.settings.highlights;
 		if (!highlights || Object.keys(highlights).length === 0) return;
+
+		const { PdfHighlightLayer } = await import("./ui/pdf-highlight-layer");
 
 		// Clean up stale layers (viewer may have been destroyed during zoom)
 		this.highlightLayers = this.highlightLayers.filter((layer) => {
@@ -272,26 +285,33 @@ export default class PaperAnalyzerPlugin extends Plugin {
 	rerenderPdfHighlights(): void {
 		for (const layer of this.highlightLayers) layer.destroy();
 		this.highlightLayers = [];
-		this.refreshPdfHighlights();
+		void this.refreshPdfHighlights();
 	}
 
 	private async launchAnalysis(pdfFile: TFile): Promise<void> {
+		const { AnalyzeModal } = await import("./ui/analyze-modal");
 		new AnalyzeModal(this.app, this, pdfFile).open();
 	}
 
 	private async launchSummary(file: TFile): Promise<void> {
+		const { SummaryModal } = await import("./ui/summary-modal");
 		new SummaryModal(this.app, this, file).open();
 	}
 
 	async loadSettings(): Promise<void> {
 		const loaded = (await this.loadData()) as Partial<PaperAnalyzerSettings>;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded);
-		let shouldPersistSettings = false;
-
-		// Initialize i18n with stored language
 		setLocale(this.settings.language ?? "en");
 
-		// Deep-merge nested citationSidebar so new fields get defaults
+		const CURRENT_SETTINGS_VERSION = 1;
+
+		// Fast path: skip expensive normalization if settings are already current
+		if (this.settings.settingsVersion === CURRENT_SETTINGS_VERSION) {
+			this.sanitizeQueues();
+			return;
+		}
+
+		// Migration / normalization path (runs once after upgrade)
 		const loadedCitationSidebar = loaded?.citationSidebar as
 			| (Record<string, unknown> & Partial<PaperAnalyzerSettings["citationSidebar"]>)
 			| undefined;
@@ -301,6 +321,7 @@ export default class PaperAnalyzerPlugin extends Plugin {
 				...loadedCitationSidebar,
 			};
 		}
+
 		if (
 			Object.prototype.hasOwnProperty.call(
 				this.settings.citationSidebar as unknown as Record<string, unknown>,
@@ -308,7 +329,6 @@ export default class PaperAnalyzerPlugin extends Plugin {
 			)
 		) {
 			delete (this.settings.citationSidebar as unknown as Record<string, unknown>)["openalexApiKey"];
-			shouldPersistSettings = true;
 		}
 
 		const legacyOpenalexApiKey =
@@ -320,195 +340,104 @@ export default class PaperAnalyzerPlugin extends Plugin {
 			this.settings.citationSidebar.semanticScholarApiKey === legacyOpenalexApiKey
 		) {
 			this.settings.citationSidebar.semanticScholarApiKey = "";
-			shouldPersistSettings = true;
 		}
 
-		const normalizedArxivAliases = normalizeCitationFieldAliases(
-			this.settings.citationSidebar.arxivFieldAliases,
-			DEFAULT_ARXIV_FIELD_ALIASES
-		);
-		const normalizedDoiAliases = normalizeCitationFieldAliases(
-			this.settings.citationSidebar.doiFieldAliases,
-			DEFAULT_DOI_FIELD_ALIASES
-		);
-		if (
-			JSON.stringify(this.settings.citationSidebar.arxivFieldAliases) !==
-			JSON.stringify(normalizedArxivAliases)
-		) {
-			this.settings.citationSidebar.arxivFieldAliases = normalizedArxivAliases;
-			shouldPersistSettings = true;
-		}
-		if (
-			JSON.stringify(this.settings.citationSidebar.doiFieldAliases) !==
-			JSON.stringify(normalizedDoiAliases)
-		) {
-			this.settings.citationSidebar.doiFieldAliases = normalizedDoiAliases;
-			shouldPersistSettings = true;
-		}
+		const normalized: PaperAnalyzerSettings = {
+			...this.settings,
+			citationSidebar: {
+				...this.settings.citationSidebar,
+				arxivFieldAliases: normalizeCitationFieldAliases(
+					this.settings.citationSidebar.arxivFieldAliases,
+					DEFAULT_ARXIV_FIELD_ALIASES
+				),
+				doiFieldAliases: normalizeCitationFieldAliases(
+					this.settings.citationSidebar.doiFieldAliases,
+					DEFAULT_DOI_FIELD_ALIASES
+				),
+			},
+			typeColorMap: normalizeTypeColorMap(loaded?.typeColorMap),
+			highlightOpacity: Math.min(
+				1,
+				Math.max(0.15, loaded?.highlightOpacity ?? DEFAULT_SETTINGS.highlightOpacity)
+			),
+			existingPdfAction: normalizeDuplicateImportAction(
+				loaded?.existingPdfAction,
+				DEFAULT_SETTINGS.existingPdfAction
+			),
+			existingNoteAction: normalizeDuplicateImportAction(
+				loaded?.existingNoteAction,
+				DEFAULT_SETTINGS.existingNoteAction
+			),
+			extractionProvider: normalizeLlmProvider(
+				loaded?.extractionProvider,
+				DEFAULT_SETTINGS.extractionProvider
+			),
+			summaryProvider: normalizeLlmProvider(
+				loaded?.summaryProvider,
+				DEFAULT_SETTINGS.summaryProvider
+			),
+			huggingFaceUserId:
+				typeof loaded?.huggingFaceUserId === "string"
+					? loaded.huggingFaceUserId.trim()
+					: DEFAULT_SETTINGS.huggingFaceUserId,
+			huggingFaceApiKey:
+				typeof loaded?.huggingFaceApiKey === "string"
+					? loaded.huggingFaceApiKey.trim()
+					: DEFAULT_SETTINGS.huggingFaceApiKey,
+			preferHuggingFacePaperMarkdown: loaded?.preferHuggingFacePaperMarkdown !== false,
+			autoSummarizeAfterImport: loaded?.autoSummarizeAfterImport === true,
+			defaultSummaryEffort: normalizeSummaryEffort(
+				loaded?.defaultSummaryEffort,
+				DEFAULT_SETTINGS.defaultSummaryEffort
+			),
+			summaryLowPrompt:
+				typeof loaded?.summaryLowPrompt === "string"
+					? loaded.summaryLowPrompt
+					: DEFAULT_SETTINGS.summaryLowPrompt,
+			summaryMediumPrompt:
+				typeof loaded?.summaryMediumPrompt === "string"
+					? loaded.summaryMediumPrompt
+					: DEFAULT_SETTINGS.summaryMediumPrompt,
+			summaryHighPrompt:
+				typeof loaded?.summaryHighPrompt === "string"
+					? loaded.summaryHighPrompt
+					: DEFAULT_SETTINGS.summaryHighPrompt,
+			summaryExtreamPrompt:
+				typeof loaded?.summaryExtreamPrompt === "string"
+					? loaded.summaryExtreamPrompt
+					: DEFAULT_SETTINGS.summaryExtreamPrompt,
+			summaryLowPromptZh:
+				typeof loaded?.summaryLowPromptZh === "string"
+					? loaded.summaryLowPromptZh
+					: DEFAULT_SETTINGS.summaryLowPromptZh,
+			summaryMediumPromptZh:
+				typeof loaded?.summaryMediumPromptZh === "string"
+					? loaded.summaryMediumPromptZh
+					: DEFAULT_SETTINGS.summaryMediumPromptZh,
+			summaryHighPromptZh:
+				typeof loaded?.summaryHighPromptZh === "string"
+					? loaded.summaryHighPromptZh
+					: DEFAULT_SETTINGS.summaryHighPromptZh,
+			summaryExtreamPromptZh:
+				typeof loaded?.summaryExtreamPromptZh === "string"
+					? loaded.summaryExtreamPromptZh
+					: DEFAULT_SETTINGS.summaryExtreamPromptZh,
+			paperNoteTemplate:
+				typeof loaded?.paperNoteTemplate === "string"
+					? loaded.paperNoteTemplate
+					: DEFAULT_SETTINGS.paperNoteTemplate,
+			settingsVersion: CURRENT_SETTINGS_VERSION,
+		};
 
-		const normalizedTypeColorMap = normalizeTypeColorMap(loaded?.typeColorMap);
-		const normalizedHighlightOpacity = Math.min(
-			1,
-			Math.max(0.15, loaded?.highlightOpacity ?? DEFAULT_SETTINGS.highlightOpacity)
-		);
-		const normalizedExistingPdfAction = normalizeDuplicateImportAction(
-			loaded?.existingPdfAction,
-			DEFAULT_SETTINGS.existingPdfAction
-		);
-		const normalizedExistingNoteAction = normalizeDuplicateImportAction(
-			loaded?.existingNoteAction,
-			DEFAULT_SETTINGS.existingNoteAction
-		);
-		const normalizedExtractionProvider = normalizeLlmProvider(
-			loaded?.extractionProvider,
-			DEFAULT_SETTINGS.extractionProvider
-		);
-		const normalizedSummaryProvider = normalizeLlmProvider(
-			loaded?.summaryProvider,
-			DEFAULT_SETTINGS.summaryProvider
-		);
-		const normalizedHuggingFaceUserId =
-			typeof loaded?.huggingFaceUserId === "string"
-				? loaded.huggingFaceUserId.trim()
-				: DEFAULT_SETTINGS.huggingFaceUserId;
-		const normalizedHuggingFaceApiKey =
-			typeof loaded?.huggingFaceApiKey === "string"
-				? loaded.huggingFaceApiKey.trim()
-				: DEFAULT_SETTINGS.huggingFaceApiKey;
-		const normalizedPreferHuggingFacePaperMarkdown =
-			loaded?.preferHuggingFacePaperMarkdown !== false;
-		const normalizedAutoSummarizeAfterImport =
-			loaded?.autoSummarizeAfterImport === true;
-		const normalizedDefaultSummaryEffort = normalizeSummaryEffort(
-			loaded?.defaultSummaryEffort,
-			DEFAULT_SETTINGS.defaultSummaryEffort
-		);
-		const normalizedSummaryLowPrompt =
-			typeof loaded?.summaryLowPrompt === "string"
-				? loaded.summaryLowPrompt
-				: DEFAULT_SETTINGS.summaryLowPrompt;
-		const normalizedSummaryMediumPrompt =
-			typeof loaded?.summaryMediumPrompt === "string"
-				? loaded.summaryMediumPrompt
-				: DEFAULT_SETTINGS.summaryMediumPrompt;
-		const normalizedSummaryHighPrompt =
-			typeof loaded?.summaryHighPrompt === "string"
-				? loaded.summaryHighPrompt
-				: DEFAULT_SETTINGS.summaryHighPrompt;
-		const normalizedSummaryExtreamPrompt =
-			typeof loaded?.summaryExtreamPrompt === "string"
-				? loaded.summaryExtreamPrompt
-				: DEFAULT_SETTINGS.summaryExtreamPrompt;
-		const normalizedSummaryLowPromptZh =
-			typeof loaded?.summaryLowPromptZh === "string"
-				? loaded.summaryLowPromptZh
-				: DEFAULT_SETTINGS.summaryLowPromptZh;
-		const normalizedSummaryMediumPromptZh =
-			typeof loaded?.summaryMediumPromptZh === "string"
-				? loaded.summaryMediumPromptZh
-				: DEFAULT_SETTINGS.summaryMediumPromptZh;
-		const normalizedSummaryHighPromptZh =
-			typeof loaded?.summaryHighPromptZh === "string"
-				? loaded.summaryHighPromptZh
-				: DEFAULT_SETTINGS.summaryHighPromptZh;
-		const normalizedSummaryExtreamPromptZh =
-			typeof loaded?.summaryExtreamPromptZh === "string"
-				? loaded.summaryExtreamPromptZh
-				: DEFAULT_SETTINGS.summaryExtreamPromptZh;
-		const normalizedPaperNoteTemplate =
-			typeof loaded?.paperNoteTemplate === "string"
-				? loaded.paperNoteTemplate
-				: DEFAULT_SETTINGS.paperNoteTemplate;
-		const colorsChanged =
-			JSON.stringify(this.settings.typeColorMap) !==
-			JSON.stringify(normalizedTypeColorMap);
-		const opacityChanged = this.settings.highlightOpacity !== normalizedHighlightOpacity;
-		const existingPdfActionChanged =
-			this.settings.existingPdfAction !== normalizedExistingPdfAction;
-		const existingNoteActionChanged =
-			this.settings.existingNoteAction !== normalizedExistingNoteAction;
-		const extractionProviderChanged =
-			this.settings.extractionProvider !== normalizedExtractionProvider;
-		const summaryProviderChanged =
-			this.settings.summaryProvider !== normalizedSummaryProvider;
-		const huggingFaceUserIdChanged =
-			this.settings.huggingFaceUserId !== normalizedHuggingFaceUserId;
-		const huggingFaceApiKeyChanged =
-			this.settings.huggingFaceApiKey !== normalizedHuggingFaceApiKey;
-		const preferHuggingFacePaperMarkdownChanged =
-			this.settings.preferHuggingFacePaperMarkdown !==
-			normalizedPreferHuggingFacePaperMarkdown;
-		const autoSummarizeAfterImportChanged =
-			this.settings.autoSummarizeAfterImport !==
-			normalizedAutoSummarizeAfterImport;
-		const defaultSummaryEffortChanged =
-			this.settings.defaultSummaryEffort !== normalizedDefaultSummaryEffort;
-		const summaryLowPromptChanged =
-			this.settings.summaryLowPrompt !== normalizedSummaryLowPrompt;
-		const summaryMediumPromptChanged =
-			this.settings.summaryMediumPrompt !== normalizedSummaryMediumPrompt;
-		const summaryHighPromptChanged =
-			this.settings.summaryHighPrompt !== normalizedSummaryHighPrompt;
-		const summaryExtreamPromptChanged =
-			this.settings.summaryExtreamPrompt !== normalizedSummaryExtreamPrompt;
-		const summaryLowPromptZhChanged =
-			this.settings.summaryLowPromptZh !== normalizedSummaryLowPromptZh;
-		const summaryMediumPromptZhChanged =
-			this.settings.summaryMediumPromptZh !== normalizedSummaryMediumPromptZh;
-		const summaryHighPromptZhChanged =
-			this.settings.summaryHighPromptZh !== normalizedSummaryHighPromptZh;
-		const summaryExtreamPromptZhChanged =
-			this.settings.summaryExtreamPromptZh !== normalizedSummaryExtreamPromptZh;
-		const paperNoteTemplateChanged =
-			this.settings.paperNoteTemplate !== normalizedPaperNoteTemplate;
-		this.settings.typeColorMap = normalizedTypeColorMap;
-		this.settings.highlightOpacity = normalizedHighlightOpacity;
-		this.settings.existingPdfAction = normalizedExistingPdfAction;
-		this.settings.existingNoteAction = normalizedExistingNoteAction;
-		this.settings.extractionProvider = normalizedExtractionProvider;
-		this.settings.summaryProvider = normalizedSummaryProvider;
-		this.settings.huggingFaceUserId = normalizedHuggingFaceUserId;
-		this.settings.huggingFaceApiKey = normalizedHuggingFaceApiKey;
-		this.settings.preferHuggingFacePaperMarkdown =
-			normalizedPreferHuggingFacePaperMarkdown;
-		this.settings.autoSummarizeAfterImport = normalizedAutoSummarizeAfterImport;
-		this.settings.defaultSummaryEffort = normalizedDefaultSummaryEffort;
-		this.settings.summaryLowPrompt = normalizedSummaryLowPrompt;
-		this.settings.summaryMediumPrompt = normalizedSummaryMediumPrompt;
-		this.settings.summaryHighPrompt = normalizedSummaryHighPrompt;
-		this.settings.summaryExtreamPrompt = normalizedSummaryExtreamPrompt;
-		this.settings.summaryLowPromptZh = normalizedSummaryLowPromptZh;
-		this.settings.summaryMediumPromptZh = normalizedSummaryMediumPromptZh;
-		this.settings.summaryHighPromptZh = normalizedSummaryHighPromptZh;
-		this.settings.summaryExtreamPromptZh = normalizedSummaryExtreamPromptZh;
-		this.settings.paperNoteTemplate = normalizedPaperNoteTemplate;
-		if (
-			colorsChanged ||
-			opacityChanged ||
-			existingPdfActionChanged ||
-			existingNoteActionChanged ||
-			extractionProviderChanged ||
-			summaryProviderChanged ||
-			huggingFaceUserIdChanged ||
-			huggingFaceApiKeyChanged ||
-			preferHuggingFacePaperMarkdownChanged ||
-			autoSummarizeAfterImportChanged ||
-			defaultSummaryEffortChanged ||
-			summaryLowPromptChanged ||
-			summaryMediumPromptChanged ||
-			summaryHighPromptChanged ||
-			summaryExtreamPromptChanged ||
-			summaryLowPromptZhChanged ||
-			summaryMediumPromptZhChanged ||
-			summaryHighPromptZhChanged ||
-			summaryExtreamPromptZhChanged ||
-			paperNoteTemplateChanged ||
-			shouldPersistSettings
-		) {
+		if (JSON.stringify(this.settings) !== JSON.stringify(normalized)) {
+			this.settings = normalized;
 			await this.saveData(this.settings);
 		}
 
-		// Validate and sanitize analyzeQueue items loaded from data.json
+		this.sanitizeQueues();
+	}
+
+	private sanitizeQueues(): void {
 		this.settings.analyzeQueue = (this.settings.analyzeQueue ?? []).filter(
 			(item): item is import("./types").QueueItem => {
 				const r = item as unknown as Record<string, unknown>;
@@ -519,7 +448,6 @@ export default class PaperAnalyzerPlugin extends Plugin {
 				);
 			}
 		);
-		// Reset any running tasks to pending (handles crash recovery)
 		this.settings.analyzeQueue.forEach((item) => {
 			if (item.status === "running") item.status = "pending";
 		});

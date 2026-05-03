@@ -89,7 +89,7 @@ export class AnalyzeQueue {
 					this.plugin.settings.highlights ??= {};
 					this.plugin.settings.highlights[item.pdfFile] = highlights;
 					// Immediately mount overlays on any open PDF viewer for this file
-					this.plugin.refreshPdfHighlights();
+					void this.plugin.refreshPdfHighlights();
 				}
 			});
 			item.status = "done";
