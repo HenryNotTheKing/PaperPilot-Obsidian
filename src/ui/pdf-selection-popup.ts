@@ -1,4 +1,4 @@
-import { setIcon } from "obsidian";
+import { App, Component, MarkdownRenderer, setIcon } from "obsidian";
 
 const POPUP_CLASS = "paper-analyzer-explanation-popup";
 const CONTENT_CLASS = "paper-analyzer-explanation-content";
@@ -9,6 +9,7 @@ const MAX_WIDTH = 400;
 const MARGIN = 8;
 
 export class PdfSelectionPopup {
+	private app: App;
 	private el: HTMLElement | null = null;
 	public contentEl: HTMLElement | null = null;
 	private copyBtn: HTMLElement | null = null;
@@ -18,9 +19,13 @@ export class PdfSelectionPopup {
 	private onScrollHandler: (() => void) | null = null;
 	private selectionRect: DOMRect;
 	private isFinalized = false;
+	private component: Component;
 
-	constructor(selectionRect: DOMRect) {
+	constructor(app: App, selectionRect: DOMRect) {
+		this.app = app;
 		this.selectionRect = selectionRect;
+		this.component = new Component();
+		this.component.load();
 	}
 
 	create(initialText = ""): void {
@@ -97,6 +102,18 @@ export class PdfSelectionPopup {
 			this.cursorEl = null;
 		}
 		this.isFinalized = true;
+
+		// Render markdown after streaming completes
+		if (this.fullText && this.contentEl) {
+			this.contentEl.empty();
+			void MarkdownRenderer.render(
+				this.app,
+				this.fullText,
+				this.contentEl,
+				"",
+				this.component
+			);
+		}
 	}
 
 	destroy(): void {
@@ -116,6 +133,7 @@ export class PdfSelectionPopup {
 		this.copyBtn = null;
 		this.cursorEl = null;
 		this.fullText = "";
+		this.component.unload();
 	}
 
 	private position(rect: DOMRect): void {

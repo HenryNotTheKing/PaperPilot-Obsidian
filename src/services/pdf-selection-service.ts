@@ -21,30 +21,31 @@ function getPdfFileFromSelection(app: App, selection: Selection): TFile | null {
 	const container = selection.getRangeAt(0).commonAncestorContainer;
 	const element = container instanceof Element ? container : container.parentElement;
 	const pageEl = element?.closest<HTMLElement>(".page");
-	if (!pageEl) return null;
-
-	// Find the workspace leaf containing this PDF
-	const pdfViewer = pageEl.closest<HTMLElement>(".pdfViewer");
-	if (!pdfViewer) return null;
-
-	// Walk up to find the workspace leaf, then resolve the file
-	let leafEl: HTMLElement | null = pdfViewer;
-	while (leafEl && !leafEl.classList.contains("workspace-leaf")) {
-		leafEl = leafEl.parentElement;
+	if (!pageEl) {
+		console.debug("[PDF解释] 未找到 .page 元素");
+		return null;
 	}
-	if (!leafEl) return null;
 
-	// Find the corresponding leaf in the workspace
+	const pdfViewer = pageEl.closest<HTMLElement>(".pdfViewer");
+	if (!pdfViewer) {
+		console.debug("[PDF解释] 未找到 .pdfViewer 元素");
+		return null;
+	}
+
 	let foundFile: TFile | null = null;
 	app.workspace.iterateAllLeaves((leaf) => {
 		if (foundFile) return;
-		if (leaf.view.containerEl === leafEl || leaf.view.containerEl.contains(leafEl)) {
-			const view = leaf.view;
-			if (view instanceof FileView && view.file?.extension === "pdf") {
+		const view = leaf.view;
+		if (view instanceof FileView && view.file?.extension === "pdf") {
+			// Check if this PDF view contains the selected pdfViewer
+			if (view.containerEl.contains(pdfViewer)) {
 				foundFile = view.file;
 			}
 		}
 	});
+	if (!foundFile) {
+		console.debug("[PDF解释] 未找到匹配的 PDF 文件");
+	}
 	return foundFile;
 }
 
@@ -111,11 +112,13 @@ export class PdfSelectionService {
 	attach(): void {
 		this.keydownHandler = (e: KeyboardEvent) => {
 			if (e.shiftKey && e.key.toLowerCase() === "t") {
+				console.debug("[PDF解释] Shift+T 触发");
 				e.preventDefault();
 				void this.handleExplainRequest();
 			}
 		};
 		document.addEventListener("keydown", this.keydownHandler);
+		console.debug("[PDF解释] PdfSelectionService 已 attach");
 
 		// Auto-hide popup when selection is cleared
 		this.selectionHandler = () => {
@@ -140,25 +143,40 @@ export class PdfSelectionService {
 	}
 
 	async handleExplainRequest(): Promise<void> {
+		console.debug("[PDF解释] handleExplainRequest 开始");
 		const selection = window.getSelection();
-		if (!selection || selection.toString().trim().length === 0) return;
-		if (!isSelectionInPdfViewer(selection)) return;
+		if (!selection || selection.toString().trim().length === 0) {
+			console.debug("[PDF解释] 无选区，退出");
+			return;
+		}
+		if (!isSelectionInPdfViewer(selection)) {
+			console.debug("[PDF解释] 选区不在 PDF viewer 中");
+			return;
+		}
 
 		const selectedText = selection.toString().trim();
+		console.debug("[PDF解释] 选中文本:", selectedText.slice(0, 50));
 		const pdfFile = getPdfFileFromSelection(this.app, selection);
-		if (!pdfFile) return;
+		if (!pdfFile) {
+			console.debug("[PDF解释] 无法解析 PDF 文件");
+			return;
+		}
+		console.debug("[PDF解释] PDF 文件:", pdfFile.path);
 
 		const rect = selection.getRangeAt(0).getBoundingClientRect();
-		if (rect.width === 0 || rect.height === 0) return;
+		if (rect.width === 0 || rect.height === 0) {
+			console.debug("[PDF解释] 选区 rect 无效");
+			return;
+		}
 
-		// Abort any ongoing request
+		// Abort any ongoing request and clean up old popup
 		this.abortController?.abort();
-		this.abortController = new AbortController();
-
-		// Destroy old popup and create new one
 		this.destroyPopup();
-		this.popup = new PdfSelectionPopup(rect);
+
+		this.popup = new PdfSelectionPopup(this.app, rect);
 		this.popup.create("思考中...");
+
+		this.abortController = new AbortController();
 
 		const settings = this.getSettings();
 		const type = detectSelectionType(selectedText);
@@ -174,10 +192,10 @@ export class PdfSelectionService {
 		const userPrompt = buildUserPrompt(type, selectedText, context);
 
 		const llmConfig: LlmConfig = {
-			baseUrl: settings.explanationBaseUrl,
-			apiKey: settings.explanationApiKey,
-			model: settings.explanationModel,
-			provider: settings.explanationProvider,
+			baseUrl: settings.extractionBaseUrl,
+			apiKey: settings.extractionApiKey,
+			model: settings.extractionModel,
+			provider: settings.extractionProvider,
 		};
 
 		// Reset content for streaming

@@ -53,6 +53,7 @@ export async function callLlmStream(
 	const request = buildLlmRequest(config, systemPrompt, userContent, {
 		temperature: 0.3,
 		maxTokens: 2048,
+		responseMode: "text",
 	});
 
 	// Inject stream flag into request body

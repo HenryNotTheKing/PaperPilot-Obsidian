@@ -22,7 +22,7 @@ import { extractArxivId } from "./services/arxiv-client";
 import { isCitationGraphFile } from "./services/paper-identity-resolver";
 import { t, setLocale } from "./i18n";
 import type { PdfHighlightLayer } from "./ui/pdf-highlight-layer";
-import type { PdfSelectionService } from "./services/pdf-selection-service";
+import { PdfSelectionService } from "./services/pdf-selection-service";
 
 export default class PaperAnalyzerPlugin extends Plugin {
 	settings!: PaperAnalyzerSettings;
@@ -78,11 +78,8 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		});
 
 		// Initialize PDF selection explanation service
-		void (async () => {
-			const { PdfSelectionService } = await import("./services/pdf-selection-service");
-			this.pdfSelectionService = new PdfSelectionService(this.app, () => this.settings);
-			this.pdfSelectionService.attach();
-		})();
+		this.pdfSelectionService = new PdfSelectionService(this.app, () => this.settings);
+		this.pdfSelectionService.attach();
 	}
 
 	private registerCommands(): void {
@@ -397,22 +394,6 @@ export default class PaperAnalyzerPlugin extends Plugin {
 				loaded?.extractionProvider,
 				DEFAULT_SETTINGS.extractionProvider
 			),
-			explanationProvider: normalizeLlmProvider(
-				loaded?.explanationProvider,
-				DEFAULT_SETTINGS.explanationProvider
-			),
-			explanationBaseUrl:
-				typeof loaded?.explanationBaseUrl === "string"
-					? loaded.explanationBaseUrl.trim()
-					: DEFAULT_SETTINGS.explanationBaseUrl,
-			explanationApiKey:
-				typeof loaded?.explanationApiKey === "string"
-					? loaded.explanationApiKey.trim()
-					: DEFAULT_SETTINGS.explanationApiKey,
-			explanationModel:
-				typeof loaded?.explanationModel === "string"
-					? loaded.explanationModel.trim()
-					: DEFAULT_SETTINGS.explanationModel,
 			explanationContextWindow:
 				typeof loaded?.explanationContextWindow === "number" &&
 				loaded.explanationContextWindow > 0

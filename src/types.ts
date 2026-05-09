@@ -418,14 +418,6 @@ export interface CitationExportSettings {
 	customFormats: CitationCustomFormat[];
 }
 
-export interface ExplanationConfig {
-	baseUrl: string;
-	apiKey: string;
-	model: string;
-	provider: LlmProvider;
-	contextWindow: number;
-}
-
 declare module "obsidian" {
 	interface Workspace {
 		on(
