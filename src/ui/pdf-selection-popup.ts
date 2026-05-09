@@ -6,7 +6,6 @@ const COPY_BTN_CLASS = "paper-analyzer-explanation-copy";
 const CURSOR_CLASS = "paper-analyzer-explanation-cursor";
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
-const MAX_HEIGHT = 300;
 const MARGIN = 8;
 
 export class PdfSelectionPopup {
@@ -34,18 +33,8 @@ export class PdfSelectionPopup {
 
 		this.el = document.createElement("div");
 		this.el.addClass(POPUP_CLASS);
-		this.el.style.position = "fixed";
-		this.el.style.zIndex = "100";
-		this.el.style.minWidth = `${MIN_WIDTH}px`;
-		this.el.style.maxWidth = `${MAX_WIDTH}px`;
-		this.el.style.maxHeight = `${MAX_HEIGHT}px`;
-		this.el.style.overflowY = "auto";
-		this.el.style.opacity = "0";
-		this.el.style.transition = "opacity 150ms ease";
 
 		this.contentEl = this.el.createDiv({ cls: CONTENT_CLASS });
-		this.contentEl.style.whiteSpace = "pre-wrap";
-		this.contentEl.style.wordBreak = "break-word";
 
 		this.cursorEl = this.contentEl.createSpan({ cls: CURSOR_CLASS });
 
@@ -64,7 +53,10 @@ export class PdfSelectionPopup {
 
 		// Fade in
 		requestAnimationFrame(() => {
-			if (this.el) this.el.style.opacity = "1";
+			if (this.el) {
+				// eslint-disable-next-line obsidianmd/no-static-styles-assignment
+				this.el.style.opacity = "1";
+			}
 		});
 
 		// Listen to scroll on the PDF container to reposition
@@ -113,6 +105,7 @@ export class PdfSelectionPopup {
 			this.onScrollHandler = null;
 		}
 		if (this.el) {
+			// eslint-disable-next-line obsidianmd/no-static-styles-assignment
 			this.el.style.opacity = "0";
 			window.setTimeout(() => {
 				this.el?.remove();

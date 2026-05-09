@@ -161,7 +161,7 @@ export default class PaperAnalyzerPlugin extends Plugin {
 			checkCallback: (checking: boolean) => {
 				const selection = window.getSelection();
 				const hasSelection = !!selection && selection.toString().trim().length > 0;
-				const inPdf = hasSelection && !!selection!.getRangeAt(0).commonAncestorContainer.parentElement?.closest(".pdfViewer");
+				const inPdf = hasSelection && !!selection?.getRangeAt(0).commonAncestorContainer.parentElement?.closest(".pdfViewer");
 				if (!inPdf) return false;
 				if (!checking) void this.pdfSelectionService?.handleExplainRequest();
 				return true;

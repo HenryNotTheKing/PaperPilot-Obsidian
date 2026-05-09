@@ -60,6 +60,7 @@ export async function callLlmStream(
 
 	let response: Response;
 	try {
+		// eslint-disable-next-line no-restricted-globals
 		response = await fetch(request.url, {
 			method: "POST",
 			headers: request.headers,
@@ -91,7 +92,7 @@ export async function callLlmStream(
 	try {
 		while (true) {
 			if (signal?.aborted) {
-				reader.cancel();
+				await reader.cancel();
 				throw new DOMException("Aborted", "AbortError");
 			}
 
