@@ -372,6 +372,27 @@ export default class PaperAnalyzerPlugin extends Plugin {
 				loaded?.extractionProvider,
 				DEFAULT_SETTINGS.extractionProvider
 			),
+			explanationProvider: normalizeLlmProvider(
+				loaded?.explanationProvider,
+				DEFAULT_SETTINGS.explanationProvider
+			),
+			explanationBaseUrl:
+				typeof loaded?.explanationBaseUrl === "string"
+					? loaded.explanationBaseUrl.trim()
+					: DEFAULT_SETTINGS.explanationBaseUrl,
+			explanationApiKey:
+				typeof loaded?.explanationApiKey === "string"
+					? loaded.explanationApiKey.trim()
+					: DEFAULT_SETTINGS.explanationApiKey,
+			explanationModel:
+				typeof loaded?.explanationModel === "string"
+					? loaded.explanationModel.trim()
+					: DEFAULT_SETTINGS.explanationModel,
+			explanationContextWindow:
+				typeof loaded?.explanationContextWindow === "number" &&
+				loaded.explanationContextWindow > 0
+					? loaded.explanationContextWindow
+					: DEFAULT_SETTINGS.explanationContextWindow,
 			summaryProvider: normalizeLlmProvider(
 				loaded?.summaryProvider,
 				DEFAULT_SETTINGS.summaryProvider

@@ -76,6 +76,12 @@ export interface PaperAnalyzerSettings {
 	citationExport: CitationExportSettings;
 	/** Persisted highlight data keyed by PDF vault path */
 	highlights: Record<string, StoredHighlight[]>;
+
+	explanationBaseUrl: string;
+	explanationApiKey: string;
+	explanationModel: string;
+	explanationProvider: LlmProvider;
+	explanationContextWindow: number;
 }
 
 export const DEFAULT_SETTINGS: PaperAnalyzerSettings = {
@@ -131,6 +137,11 @@ export const DEFAULT_SETTINGS: PaperAnalyzerSettings = {
 		defaultFormat: "bibtex",
 		customFormats: [],
 	},
+	explanationBaseUrl: "https://api.siliconflow.cn/v1",
+	explanationApiKey: "",
+	explanationModel: "Qwen/Qwen3-8B",
+	explanationProvider: "auto",
+	explanationContextWindow: 500,
 };
 
 function formatFieldAliases(fieldAliases: string[]): string {
@@ -507,6 +518,84 @@ export class PaperAnalyzerSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.llmConcurrency = value;
 						await this.plugin.saveSettings();
+					})
+			);
+
+		// --- Explanation Model ---
+		new Setting(containerEl).setName(t("settings.explanationModel")).setHeading();
+		containerEl.createEl("p", {
+			text: t("settings.explanationModelDesc"),
+			cls: "setting-item-description",
+		});
+
+		new Setting(containerEl)
+			.setName(t("settings.baseUrl"))
+			.setDesc(t("settings.baseUrlDesc"))
+			.addText((text) =>
+				text
+					.setPlaceholder("https://api.siliconflow.cn/v1")
+					.setValue(this.plugin.settings.explanationBaseUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.explanationBaseUrl = value.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName(t("settings.provider"))
+			.setDesc(t("settings.providerDesc"))
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("auto", t("settings.providerAuto"))
+					.addOption("openai", t("settings.providerOpenAI"))
+					.addOption("anthropic", t("settings.providerAnthropic"))
+					.setValue(this.plugin.settings.explanationProvider)
+					.onChange(async (value) => {
+						this.plugin.settings.explanationProvider = normalizeLlmProvider(
+							value,
+							DEFAULT_SETTINGS.explanationProvider
+						);
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl).setName(t("settings.apiKey")).addText((text) => {
+			text
+				.setPlaceholder(t("settings.apiKeyPlaceholder"))
+				.setValue(this.plugin.settings.explanationApiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.explanationApiKey = value.trim();
+					await this.plugin.saveSettings();
+				});
+			text.inputEl.type = "password";
+		});
+
+		new Setting(containerEl)
+			.setName(t("settings.model"))
+			.setDesc(t("settings.modelPlaceholder"))
+			.addText((text) =>
+				text
+					.setPlaceholder(t("settings.modelPlaceholder"))
+					.setValue(this.plugin.settings.explanationModel)
+					.onChange(async (value) => {
+						this.plugin.settings.explanationModel = value.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName(t("settings.explanationContextWindow"))
+			.setDesc(t("settings.explanationContextWindowDesc"))
+			.addText((text) =>
+				text
+					.setPlaceholder("500")
+					.setValue(String(this.plugin.settings.explanationContextWindow))
+					.onChange(async (value) => {
+						const num = parseInt(value, 10);
+						if (!isNaN(num) && num > 0) {
+							this.plugin.settings.explanationContextWindow = num;
+							await this.plugin.saveSettings();
+						}
 					})
 			);
 
