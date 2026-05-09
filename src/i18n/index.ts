@@ -179,6 +179,7 @@ export interface Translations {
     openCitationSidebar: string;
     exportCitationCurrent: string;
     exportCitationByTag: string;
+    explainPdfSelection: string;
     ribbonImport: string;
     ribbonCitationGraph: string;
   };
@@ -470,6 +471,7 @@ const en: Translations = {
     openCitationSidebar: "Open citation graph sidebar",
     exportCitationCurrent: "Export citation for current note",
     exportCitationByTag: "Export citations by tag",
+    explainPdfSelection: "Explain PDF selection",
     ribbonImport: "Import arxiv paper",
     ribbonCitationGraph: "Citation graph",
   },
@@ -784,6 +786,7 @@ const zhCN: Translations = {
     openCitationSidebar: "打开引用图侧边栏",
     exportCitationCurrent: "导出当前笔记的引用",
     exportCitationByTag: "按 Tag 批量导出引用",
+    explainPdfSelection: "解释 PDF 选区",
     ribbonImport: "导入论文",
     ribbonCitationGraph: "引用图",
   },

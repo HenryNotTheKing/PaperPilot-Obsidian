@@ -22,6 +22,7 @@ import { extractArxivId } from "./services/arxiv-client";
 import { isCitationGraphFile } from "./services/paper-identity-resolver";
 import { t, setLocale } from "./i18n";
 import type { PdfHighlightLayer } from "./ui/pdf-highlight-layer";
+import type { PdfSelectionService } from "./services/pdf-selection-service";
 
 export default class PaperAnalyzerPlugin extends Plugin {
 	settings!: PaperAnalyzerSettings;
@@ -30,6 +31,7 @@ export default class PaperAnalyzerPlugin extends Plugin {
 	private ribbonImportHandle: HTMLElement | null = null;
 	private ribbonCitationGraphHandle: HTMLElement | null = null;
 	private highlightLayers: PdfHighlightLayer[] = [];
+	private pdfSelectionService: PdfSelectionService | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -74,6 +76,13 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(() => {
 			void this.refreshPdfHighlights();
 		});
+
+		// Initialize PDF selection explanation service
+		void (async () => {
+			const { PdfSelectionService } = await import("./services/pdf-selection-service");
+			this.pdfSelectionService = new PdfSelectionService(this.app, () => this.settings);
+			this.pdfSelectionService.attach();
+		})();
 	}
 
 	private registerCommands(): void {
@@ -145,6 +154,19 @@ export default class PaperAnalyzerPlugin extends Plugin {
 				new CitationExportModal(this.app, this, null, "tag").open();
 			},
 		});
+
+		this.addCommand({
+			id: "explain-pdf-selection",
+			name: t("commands.explainPdfSelection"),
+			checkCallback: (checking: boolean) => {
+				const selection = window.getSelection();
+				const hasSelection = !!selection && selection.toString().trim().length > 0;
+				const inPdf = hasSelection && !!selection!.getRangeAt(0).commonAncestorContainer.parentElement?.closest(".pdfViewer");
+				if (!inPdf) return false;
+				if (!checking) void this.pdfSelectionService?.handleExplainRequest();
+				return true;
+			},
+		});
 	}
 
 	private registerRibbon(): void {
@@ -173,6 +195,7 @@ export default class PaperAnalyzerPlugin extends Plugin {
 		cmdManager.commands.removeCommand("open-citation-sidebar");
 		cmdManager.commands.removeCommand("export-citation-current");
 		cmdManager.commands.removeCommand("export-citation-by-tag");
+		cmdManager.commands.removeCommand("explain-pdf-selection");
 		this.registerCommands();
 
 		// Destroy old ribbon icons and recreate with updated tooltips
@@ -234,6 +257,8 @@ export default class PaperAnalyzerPlugin extends Plugin {
 	onunload(): void {
 		for (const layer of this.highlightLayers) layer.destroy();
 		this.highlightLayers = [];
+		this.pdfSelectionService?.detach();
+		this.pdfSelectionService = null;
 	}
 
 	async refreshPdfHighlights(): Promise<void> {
