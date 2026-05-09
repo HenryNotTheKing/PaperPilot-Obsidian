@@ -1036,3 +1036,81 @@ available in the app when your plugin is enabled.
 .paper-analyzer-citation-guide.is-visible {
 	display: block;
 }
+
+/* ── PDF Selection Explanation Popup ─────────────────────────────────────── */
+
+.paper-analyzer-explanation-popup {
+	position: fixed;
+	z-index: 100;
+	padding: 12px 16px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-l);
+	background: var(--background-primary);
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+	font-family: var(--font-text);
+	font-size: var(--font-text-size);
+	line-height: 1.6;
+	color: var(--text-normal);
+	overflow-y: auto;
+}
+
+.theme-dark .paper-analyzer-explanation-popup {
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.paper-analyzer-explanation-content {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.paper-analyzer-explanation-cursor {
+	display: inline-block;
+	width: 2px;
+	height: 1.2em;
+	background: var(--text-normal);
+	margin-left: 1px;
+	vertical-align: text-bottom;
+	animation: paper-analyzer-cursor-blink 1s step-end infinite;
+}
+
+@keyframes paper-analyzer-cursor-blink {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0; }
+}
+
+.paper-analyzer-explanation-copy {
+	position: absolute;
+	bottom: 8px;
+	right: 8px;
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	cursor: pointer;
+	color: var(--text-muted);
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	opacity: 0;
+	transition: opacity 200ms ease, background-color 120ms ease;
+}
+
+.paper-analyzer-explanation-popup:hover .paper-analyzer-explanation-copy {
+	opacity: 1;
+}
+
+.paper-analyzer-explanation-copy:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.paper-analyzer-explanation-copy svg {
+	width: 14px;
+	height: 14px;
+}
+
+.paper-analyzer-explanation-error {
+	color: var(--text-error);
+	font-size: 13px;
+}
