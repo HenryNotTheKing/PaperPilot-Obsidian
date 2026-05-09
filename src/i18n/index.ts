@@ -126,6 +126,10 @@ export interface Translations {
     citationAddCustomFormat: string;
     citationDeleteCustomFormat: string;
     citationCustomFormatName: string;
+    explanationModel: string;
+    explanationModelDesc: string;
+    explanationContextWindow: string;
+    explanationContextWindowDesc: string;
   };
   notices: {
     noArxivId: string;
@@ -413,6 +417,10 @@ const en: Translations = {
     citationAddCustomFormat: "Add format",
     citationDeleteCustomFormat: "Delete format",
     citationCustomFormatName: "Format name",
+    explanationModel: "Explanation model",
+    explanationModelDesc: "Used for real-time PDF selection explanation and translation.",
+    explanationContextWindow: "Context window size",
+    explanationContextWindowDesc: "Number of characters to include before and after the selected text as context (default: 500).",
   },
   notices: {
     noArxivId: "No arxiv_id in frontmatter — import the paper first",
@@ -723,6 +731,10 @@ const zhCN: Translations = {
     citationAddCustomFormat: "添加格式",
     citationDeleteCustomFormat: "删除格式",
     citationCustomFormatName: "格式名称",
+    explanationModel: "划词解释模型",
+    explanationModelDesc: "用于 PDF 划词实时解释和翻译。",
+    explanationContextWindow: "上下文窗口大小",
+    explanationContextWindowDesc: "选中文本前后各取多少字符作为上下文（默认 500）。",
   },
   notices: {
     noArxivId: "前置信息中没有 arxiv_id -- 请先导入论文",
