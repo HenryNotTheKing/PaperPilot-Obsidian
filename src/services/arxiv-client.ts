@@ -2,6 +2,100 @@ import { requestUrl, TFile } from "obsidian";
 import type { App } from "obsidian";
 import type { ArxivMeta } from "../types";
 
+const ARXIV_API_MIN_INTERVAL_MS = 3000;
+const ARXIV_API_MAX_RETRY_ATTEMPTS = 2;
+const ARXIV_API_MAX_RETRY_DELAY_MS = 15000;
+
+let lastArxivApiRequestStartedAt = 0;
+let nextArxivApiSlot: Promise<void> = Promise.resolve();
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function parseRetryAfterMs(value?: string | null): number | null {
+	if (!value) return null;
+	const trimmed = value.trim();
+	if (!trimmed) return null;
+
+	const seconds = Number(trimmed);
+	if (Number.isFinite(seconds) && seconds >= 0) {
+		return Math.round(seconds * 1000);
+	}
+
+	const retryAt = Date.parse(trimmed);
+	if (Number.isNaN(retryAt)) return null;
+	return Math.max(0, retryAt - Date.now());
+}
+
+function getHeaderValue(headers: unknown, key: string): string | null {
+	if (!headers) return null;
+	const normalizedKey = key.toLowerCase();
+
+	if (
+		typeof headers === "object" &&
+		headers !== null &&
+		"get" in headers &&
+		typeof (headers as { get?: unknown }).get === "function"
+	) {
+		const value = (headers as { get: (name: string) => string | null }).get(normalizedKey);
+		return typeof value === "string" ? value : null;
+	}
+
+	if (typeof headers !== "object" || headers === null) return null;
+	for (const headerName in headers as Record<string, unknown>) {
+		const headerValue = (headers as Record<string, unknown>)[headerName];
+		if (headerName.toLowerCase() !== normalizedKey) continue;
+		return typeof headerValue === "string" ? headerValue : null;
+	}
+
+	return null;
+}
+
+function shouldRetryArxivRequest(status: number): boolean {
+	return status === 429 || status === 502 || status === 503 || status === 504;
+}
+
+function getArxivRetryDelayMs(
+	attemptIndex: number,
+	retryAfterHeader?: string | null
+): number {
+	const retryAfterMs = parseRetryAfterMs(retryAfterHeader);
+	if (retryAfterMs !== null) {
+		return Math.min(
+			Math.max(retryAfterMs, ARXIV_API_MIN_INTERVAL_MS),
+			ARXIV_API_MAX_RETRY_DELAY_MS
+		);
+	}
+
+	return Math.min(
+		ARXIV_API_MIN_INTERVAL_MS * Math.pow(2, Math.max(0, attemptIndex)),
+		ARXIV_API_MAX_RETRY_DELAY_MS
+	);
+}
+
+async function waitForArxivApiSlot(): Promise<void> {
+	let releaseSlot: (() => void) | undefined;
+	const previousSlot = nextArxivApiSlot;
+	nextArxivApiSlot = new Promise<void>((resolve) => {
+		releaseSlot = resolve;
+	});
+
+	await previousSlot;
+
+	const now = Date.now();
+	const waitMs = Math.max(
+		0,
+		lastArxivApiRequestStartedAt + ARXIV_API_MIN_INTERVAL_MS - now
+	);
+	if (waitMs > 0) {
+		await sleep(waitMs);
+	}
+
+	lastArxivApiRequestStartedAt = Date.now();
+	releaseSlot?.();
+}
+
 // --- Pure functions (unit tested) ---
 
 export function extractArxivId(input: string): string | null {
@@ -55,19 +149,37 @@ export function parseArxivXml(xml: string): ArxivMeta {
 // --- Obsidian-dependent functions (manual integration tested) ---
 
 export async function fetchArxivMeta(id: string): Promise<ArxivMeta> {
-	const resp = await requestUrl({
-		url: `https://export.arxiv.org/api/query?id_list=${encodeURIComponent(id)}`,
-		method: "GET",
-		throw: false,
-	});
+	for (let attemptIndex = 0; attemptIndex <= ARXIV_API_MAX_RETRY_ATTEMPTS; attemptIndex++) {
+		await waitForArxivApiSlot();
 
-	if (resp.status !== 200) {
+		const resp = await requestUrl({
+			url: `https://export.arxiv.org/api/query?id_list=${encodeURIComponent(id)}`,
+			method: "GET",
+			throw: false,
+		});
+
+		if (resp.status === 200) {
+			return parseArxivXml(resp.text);
+		}
+
+		if (
+			attemptIndex < ARXIV_API_MAX_RETRY_ATTEMPTS &&
+			shouldRetryArxivRequest(resp.status)
+		) {
+			const retryDelayMs = getArxivRetryDelayMs(
+				attemptIndex,
+				getHeaderValue((resp as { headers?: unknown }).headers, "retry-after")
+			);
+			await sleep(retryDelayMs);
+			continue;
+		}
+
 		throw new Error(
 			`ArXiv API returned ${resp.status}. Check your connection.`
 		);
 	}
 
-	return parseArxivXml(resp.text);
+	throw new Error("ArXiv API request failed after retries.");
 }
 
 export function sanitizeFileName(title: string): string {

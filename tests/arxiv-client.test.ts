@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { requestUrl } from "obsidian";
 import {
 	extractArxivId,
 	parseArxivXml,
@@ -8,7 +9,25 @@ import {
 	buildPaperNoteContent,
 	renderPaperNoteTemplate,
 	sanitizeFileName,
+	fetchArxivMeta,
 } from "../src/services/arxiv-client";
+
+const requestUrlMock = vi.mocked(requestUrl);
+
+function createResponse(status: number, text: string, headers?: Record<string, string>) {
+	return {
+		status,
+		text,
+		json: undefined,
+		arrayBuffer: new ArrayBuffer(0),
+		headers: headers ?? {},
+	};
+}
+
+async function flushAsyncWork(): Promise<void> {
+	await Promise.resolve();
+	await Promise.resolve();
+}
 
 describe("extractArxivId", () => {
 	it("parses abs URL", () => {
@@ -114,7 +133,7 @@ describe("paper note templates", () => {
 			name: "GPT-4 Technical Report.pdf",
 		}, "   ");
 		expect(content).toContain("arxiv_id: \"2303.08774\"");
-		expect(content).toContain("![[GPT-4 Technical Report.pdf]]");
+		expect(content).toContain('pdf_file: "[[GPT-4 Technical Report.pdf]]"');
 	});
 });
 
@@ -164,6 +183,67 @@ describe("parseArxivXml", () => {
 
 	it("throws on malformed XML with no entry", () => {
 		expect(() => parseArxivXml("<feed></feed>")).toThrow("No entry found");
+	});
+});
+
+describe("fetchArxivMeta", () => {
+	let fakeNow = Date.parse("2026-05-15T00:00:00.000Z");
+
+	const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>http://arxiv.org/abs/2303.08774v1</id>
+    <title>GPT-4 Technical Report</title>
+    <summary>We report the development of GPT-4.</summary>
+    <published>2023-03-15T00:00:00Z</published>
+    <author><name>OpenAI</name></author>
+    <link title="pdf" href="https://arxiv.org/pdf/2303.08774v1" rel="related" type="application/pdf"/>
+  </entry>
+</feed>`;
+
+	beforeEach(() => {
+		requestUrlMock.mockReset();
+		vi.useFakeTimers();
+		fakeNow += 60_000;
+		vi.setSystemTime(new Date(fakeNow));
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("paces consecutive API calls to avoid arXiv rate limiting", async () => {
+		requestUrlMock.mockImplementation(async () => createResponse(200, SAMPLE_XML));
+
+		const firstPromise = fetchArxivMeta("2303.08774");
+		await flushAsyncWork();
+
+		const secondPromise = fetchArxivMeta("2303.08775");
+		await flushAsyncWork();
+
+		expect(requestUrlMock).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(3000);
+
+		await expect(firstPromise).resolves.toMatchObject({ id: "2303.08774" });
+		await expect(secondPromise).resolves.toMatchObject({ id: "2303.08774" });
+		expect(requestUrlMock).toHaveBeenCalledTimes(2);
+	});
+
+	it("retries a 429 response after the suggested delay", async () => {
+		requestUrlMock
+			.mockResolvedValueOnce(createResponse(429, "rate limited", { "retry-after": "3" }))
+			.mockResolvedValueOnce(createResponse(200, SAMPLE_XML));
+
+		const pending = fetchArxivMeta("2303.08774");
+		await flushAsyncWork();
+
+		expect(requestUrlMock).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(3000);
+
+		await expect(pending).resolves.toMatchObject({ id: "2303.08774" });
+		expect(requestUrlMock).toHaveBeenCalledTimes(2);
 	});
 });
 
