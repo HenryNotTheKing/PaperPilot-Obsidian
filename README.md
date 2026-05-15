@@ -62,7 +62,7 @@ Academic papers are dense skies — dozens of pages, hundreds of citations, mult
 | **Four summary modes** | Low / Medium / High / Extreme — trade speed for depth |
 | **Citation sidebar** | Cited and citing paper retrieval; vault similarity matching |
 | **Citation export** | Export citations from the current note or by tag in BibTeX, IEEE, or custom template formats |
-| **PDF selection explanation** | Select text in any PDF and press **Shift+T** for an instant AI explanation or translation, with full paper context |
+| **PDF selection explanation** | Select text in any PDF and press **Shift+T** for a quick translation, or **Shift+E** for a wider Markdown-rendered deep explanation with richer paper context |
 | **Background queues** | Analysis and summary jobs run without blocking the UI |
 | **Bilingual UI** | English and Simplified Chinese |
 | **Theme compatible** | Works with any Obsidian theme, light or dark |
@@ -107,7 +107,7 @@ Open **Settings → Community plugins → Paper Pilot**.
 | **Summary model** | OpenAI-compatible API base URL + model name used for summary generation |
 | **API key** | Bearer token for the above endpoints (can be the same key for both) |
 
-> **PDF selection explanation** reuses the **Extraction model** config above. No extra endpoint setup is needed.
+> **PDF selection explanation** for both **Shift+T** and **Shift+E** reuses the **Extraction model** config above. No extra endpoint setup is needed.
 
 
 Any OpenAI-compatible provider works (OpenAI, DeepSeek, Qwen, local Ollama, etc.).
@@ -139,7 +139,7 @@ The output length is governed by soft prompt-level guidance, not by hard token c
 | Highlight colors | Per-category colors: motivation, method, result, background, other |
 | Highlight opacity | Overlay transparency (0.15 – 1.0) |
 | LLM concurrency | How many parallel LLM requests are allowed |
-| Context window size | Characters before and after the selected text to include as context for PDF selection explanation (default: 500) |
+| Context window size | Characters before and after the selected text to include as context for PDF selection explanation (default: 500). **Shift+E** automatically expands this to a larger context window for more detailed answers. |
 | Citation sidebar | Depth, source, and display options for the citation panel |
 | Citation export | Default export format and reusable custom citation templates |
 
